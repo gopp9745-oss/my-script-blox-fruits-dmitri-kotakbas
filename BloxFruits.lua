@@ -2,15 +2,14 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHept
 local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
 
 local player = game.Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
+local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunService = game:GetService("RunService")
 
-local function tweenTeleport(cframe)
+local function teleportTo(pos)
     local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    local tween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {CFrame = cframe})
-    tween:Play()
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(pos)
+    end
 end
 
 local function getNearestEnemy()
@@ -18,10 +17,11 @@ local function getNearestEnemy()
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local nearest = nil
     local dist = math.huge
+    local hrpPos = char.HumanoidRootPart.Position
     for _, mob in pairs(workspace:GetDescendants()) do
         if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
             if mob.Humanoid.Health > 0 and not mob:FindFirstChild("Player") then
-                local d = (mob.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+                local d = (mob.HumanoidRootPart.Position - hrpPos).Magnitude
                 if d < dist then
                     dist = d
                     nearest = mob
@@ -42,13 +42,12 @@ MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
             local nearest = getNearestEnemy()
             if nearest then
-                local hrp = char.HumanoidRootPart
-                local targetCF = nearest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-                local dist = (nearest.HumanoidRootPart.Position - hrp.Position).Magnitude
-                if dist > 10 then
-                    tweenTeleport(targetCF)
+                local target = nearest.HumanoidRootPart.Position + Vector3.new(0, 0, 5)
+                if (target - hrp.Position).Magnitude > 8 then
+                    hrp.CFrame = CFrame.new(target, nearest.HumanoidRootPart.Position)
                 end
                 local tool = char:FindFirstChildOfClass("Tool")
                 if tool then
@@ -56,7 +55,7 @@ MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
                 end
             end
         end)
-        task.wait()
+        task.wait(0.1)
     end
 end)
 
@@ -74,7 +73,7 @@ MainSection:NewToggle("Auto Quest", "Auto accept and complete quests", function(
                         local prompt = quest:FindFirstChildWhichIsA("ProximityPrompt")
                         if prompt then fireproximityprompt(prompt) end
                     elseif d > 50 then
-                        tweenTeleport(quest.HumanoidRootPart.CFrame)
+                        teleportTo(quest.HumanoidRootPart.Position)
                     end
                 end
             end
@@ -92,10 +91,10 @@ StatsSection:NewToggle("Auto Melee", "Auto assign stats to melee", function(stat
     while _G.AutoMelee do
         pcall(function()
             if player.Data.StatPoints.Value > 0 then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
+                CommF:InvokeServer("AddPoint", "Melee", 1)
             end
         end)
-        task.wait(0.5)
+        task.wait(0.3)
     end
 end)
 
@@ -104,10 +103,10 @@ StatsSection:NewToggle("Auto Defense", "Auto assign stats to defense", function(
     while _G.AutoDefense do
         pcall(function()
             if player.Data.StatPoints.Value > 0 then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Defense", 1)
+                CommF:InvokeServer("AddPoint", "Defense", 1)
             end
         end)
-        task.wait(0.5)
+        task.wait(0.3)
     end
 end)
 
@@ -116,10 +115,10 @@ StatsSection:NewToggle("Auto Sword", "Auto assign stats to sword", function(stat
     while _G.AutoSword do
         pcall(function()
             if player.Data.StatPoints.Value > 0 then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Sword", 1)
+                CommF:InvokeServer("AddPoint", "Sword", 1)
             end
         end)
-        task.wait(0.5)
+        task.wait(0.3)
     end
 end)
 
@@ -128,10 +127,10 @@ StatsSection:NewToggle("Auto Fruit", "Auto assign stats to fruit", function(stat
     while _G.AutoFruit do
         pcall(function()
             if player.Data.StatPoints.Value > 0 then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Demon Fruit", 1)
+                CommF:InvokeServer("AddPoint", "Demon Fruit", 1)
             end
         end)
-        task.wait(0.5)
+        task.wait(0.3)
     end
 end)
 
@@ -163,10 +162,7 @@ local islands = {
 
 for _, data in pairs(islands) do
     TeleportSection:NewButton(data[1], "Teleport to " .. data[1], function()
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = data[2]
-        end
+        CommF:InvokeServer("requestEntrance", data[2].Position)
     end)
 end
 
@@ -188,7 +184,6 @@ MiscSection:NewButton("Server Hop", "Hop to another server", function()
     end
 end)
 
--- WalkSpeed / JumpPower loop (anti-reset)
 _G.WalkSpeed = 16
 _G.JumpPower = 50
 
@@ -208,7 +203,6 @@ MiscSection:NewSlider("Jump Power", "Change jump power", 500, 50, function(s)
     _G.JumpPower = s
 end)
 
--- Notify
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Blox Fruits",
     Text = "Script loaded successfully!",
