@@ -5,31 +5,27 @@ local player = game.Players.LocalPlayer
 local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunService = game:GetService("RunService")
 
-local function teleportTo(pos)
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(pos)
-    end
-end
-
-local function getNearestEnemy()
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    local nearest = nil
-    local dist = math.huge
-    local hrpPos = char.HumanoidRootPart.Position
-    for _, mob in pairs(workspace:GetDescendants()) do
-        if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
-            if mob.Humanoid.Health > 0 and not mob:FindFirstChild("Player") then
-                local d = (mob.HumanoidRootPart.Position - hrpPos).Magnitude
-                if d < dist then
-                    dist = d
-                    nearest = mob
-                end
+local function getEnemies()
+    local folder = workspace:FindFirstChild("Enemies")
+    if folder then
+        local list = {}
+        for _, v in pairs(folder:GetChildren()) do
+            if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                table.insert(list, v)
             end
         end
+        return list
     end
-    return nearest
+    return {}
+end
+
+local function safetp(cf)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    hrp.CFrame = cf
+    task.wait(0.15)
+    hrp.CFrame = cf
 end
 
 -- Main
@@ -38,47 +34,53 @@ local MainSection = MainTab:NewSection("Auto Farm")
 
 MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
     _G.AutoFarm = state
-    while _G.AutoFarm do
+    while _G.AutoFarm and task.wait(0.2) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
-            local nearest = getNearestEnemy()
-            if nearest then
-                local target = nearest.HumanoidRootPart.Position + Vector3.new(0, 0, 5)
-                if (target - hrp.Position).Magnitude > 8 then
-                    hrp.CFrame = CFrame.new(target, nearest.HumanoidRootPart.Position)
+            local enemies = getEnemies()
+            local nearest, dist = nil, math.huge
+            for _, mob in pairs(enemies) do
+                if mob.Humanoid.Health > 0 then
+                    local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    if d < dist then dist = d; nearest = mob end
+                end
+            end
+            if nearest and dist < 350 then
+                if dist > 7 then
+                    safetp(nearest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
                 end
                 local tool = char:FindFirstChildOfClass("Tool")
                 if tool then
                     tool:Activate()
+                    task.wait()
+                    tool:Activate()
                 end
             end
         end)
-        task.wait(0.1)
     end
 end)
 
 MainSection:NewToggle("Auto Quest", "Auto accept and complete quests", function(state)
     _G.AutoQuest = state
-    while _G.AutoQuest do
+    while _G.AutoQuest and task.wait(0.5) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
-            for _, quest in pairs(workspace:GetDescendants()) do
-                if quest:IsA("Model") and quest.Name:find("Quest") and quest:FindFirstChild("HumanoidRootPart") then
-                    local d = (quest.HumanoidRootPart.Position - hrp.Position).Magnitude
+            for _, q in pairs(workspace:GetDescendants()) do
+                if q:IsA("Model") and q.Name:lower():find("quest") and q:FindFirstChild("HumanoidRootPart") then
+                    local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
                     if d < 25 then
-                        local prompt = quest:FindFirstChildWhichIsA("ProximityPrompt")
-                        if prompt then fireproximityprompt(prompt) end
-                    elseif d > 50 then
-                        teleportTo(quest.HumanoidRootPart.Position)
+                        local p = q:FindFirstChildWhichIsA("ProximityPrompt")
+                        if p then fireproximityprompt(p) end
+                    elseif d > 40 then
+                        safetp(q.HumanoidRootPart.CFrame)
                     end
                 end
             end
         end)
-        task.wait(0.5)
     end
 end)
 
@@ -86,53 +88,20 @@ end)
 local StatsTab = Window:NewTab("Stats")
 local StatsSection = StatsTab:NewSection("Auto Stats")
 
-StatsSection:NewToggle("Auto Melee", "Auto assign stats to melee", function(state)
-    _G.AutoMelee = state
-    while _G.AutoMelee do
-        pcall(function()
-            if player.Data.StatPoints.Value > 0 then
-                CommF:InvokeServer("AddPoint", "Melee", 1)
-            end
-        end)
-        task.wait(0.3)
-    end
-end)
-
-StatsSection:NewToggle("Auto Defense", "Auto assign stats to defense", function(state)
-    _G.AutoDefense = state
-    while _G.AutoDefense do
-        pcall(function()
-            if player.Data.StatPoints.Value > 0 then
-                CommF:InvokeServer("AddPoint", "Defense", 1)
-            end
-        end)
-        task.wait(0.3)
-    end
-end)
-
-StatsSection:NewToggle("Auto Sword", "Auto assign stats to sword", function(state)
-    _G.AutoSword = state
-    while _G.AutoSword do
-        pcall(function()
-            if player.Data.StatPoints.Value > 0 then
-                CommF:InvokeServer("AddPoint", "Sword", 1)
-            end
-        end)
-        task.wait(0.3)
-    end
-end)
-
-StatsSection:NewToggle("Auto Fruit", "Auto assign stats to fruit", function(state)
-    _G.AutoFruit = state
-    while _G.AutoFruit do
-        pcall(function()
-            if player.Data.StatPoints.Value > 0 then
-                CommF:InvokeServer("AddPoint", "Demon Fruit", 1)
-            end
-        end)
-        task.wait(0.3)
-    end
-end)
+local statsList = {"Melee","Defense","Sword","Demon Fruit"}
+for _, s in pairs(statsList) do
+    local label = s == "Demon Fruit" and "Fruit" or s
+    StatsSection:NewToggle("Auto " .. label, nil, function(state)
+        _G["Auto"..s] = state
+        while _G["Auto"..s] and task.wait(0.3) do
+            pcall(function()
+                if player.Data.StatPoints.Value > 0 then
+                    CommF:InvokeServer("AddPoint", s, 1)
+                end
+            end)
+        end
+    end)
+end
 
 -- Teleports
 local TeleportTab = Window:NewTab("Teleports")
@@ -161,8 +130,8 @@ local islands = {
 }
 
 for _, data in pairs(islands) do
-    TeleportSection:NewButton(data[1], "Teleport to " .. data[1], function()
-        CommF:InvokeServer("requestEntrance", data[2].Position)
+    TeleportSection:NewButton(data[1], nil, function()
+        pcall(safetp, data[2])
     end)
 end
 
@@ -170,15 +139,15 @@ end
 local MiscTab = Window:NewTab("Misc")
 local MiscSection = MiscTab:NewSection("Utilities")
 
-MiscSection:NewButton("Rejoin Server", "Rejoin the current server", function()
+MiscSection:NewButton("Rejoin Server", nil, function()
     game:GetService("TeleportService"):Teleport(game.PlaceId, player)
 end)
 
-MiscSection:NewButton("Server Hop", "Hop to another server", function()
-    local req = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
-    for _, server in pairs(req.data) do
-        if server.playing < server.maxPlayers and server.id ~= game.JobId then
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, player)
+MiscSection:NewButton("Server Hop", nil, function()
+    local list = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
+    for _, v in pairs(list.data) do
+        if v.playing < v.maxPlayers and v.id ~= game.JobId then
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, player)
             break
         end
     end
@@ -195,11 +164,11 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-MiscSection:NewSlider("Walk Speed", "Change walk speed", 250, 16, function(s)
+MiscSection:NewSlider("Walk Speed", nil, 250, 16, function(s)
     _G.WalkSpeed = s
 end)
 
-MiscSection:NewSlider("Jump Power", "Change jump power", 500, 50, function(s)
+MiscSection:NewSlider("Jump Power", nil, 500, 50, function(s)
     _G.JumpPower = s
 end)
 
