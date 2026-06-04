@@ -5,7 +5,6 @@ local player = game.Players.LocalPlayer
 local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunService = game:GetService("RunService")
 local VIM = game:GetService("VirtualInputManager")
-local TweenService = game:GetService("TweenService")
 
 local function getEnemies()
     local list = {}
@@ -31,43 +30,39 @@ end
 
 local function click()
     VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-    task.wait(0.03)
+    task.wait(0.05)
     VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 end
 
 local function attack()
-    local char = player.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
-            task.wait(0.05)
-        end
+    for i = 1, 3 do
+        pcall(function()
+            local char = player.Character
+            if char then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                end
+            end
+            click()
+        end)
+        task.wait(0.08)
     end
-    click()
-    task.wait(0.05)
-    click()
 end
 
-local function smoothTP(target, steps)
-    steps = steps or 15
+local function moveTo(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     local start = hrp.CFrame
+    local steps = math.ceil((targetCF.Position - start.Position).Magnitude / 50) + 1
     for i = 1, steps do
-        hrp.CFrame = start:Lerp(target, i / steps)
+        hrp.CFrame = start:Lerp(targetCF, i / steps)
         task.wait()
     end
 end
 
-local function teleportTo(cf)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    smoothTP(cf, 15)
-end
-
--- Уровни и острова
+-- Уровни
 local levelAreas = {
     {min=0, max=15, island="Jungle", cf=CFrame.new(-1242, 30, -452)},
     {min=15, max=35, island="Pirate Village", cf=CFrame.new(-1120, 15, 510)},
@@ -103,23 +98,24 @@ local MainSection = MainTab:NewSection("Farming")
 
 MainSection:NewToggle("Auto Farm NPC", "Farm nearest enemies", function(state)
     _G.AutoFarmNPC = state
-    while _G.AutoFarmNPC and task.wait(0.2) do
+    while _G.AutoFarmNPC and task.wait(0.15) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
             local enemies = getEnemies()
+            if #enemies == 0 then return end
             local nearest, dist = nil, math.huge
             for _, mob in pairs(enemies) do
                 local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
                 if d < dist then dist = d; nearest = mob end
             end
-            if nearest and dist < 400 then
-                if dist > 6 then
-                    teleportTo(nearest.HumanoidRootPart.CFrame * CFrame.new(0, 3, 4))
+            if nearest and dist < 350 then
+                if dist > 10 then
+                    local above = CFrame.new(nearest.HumanoidRootPart.Position.X, nearest.HumanoidRootPart.Position.Y + 25, nearest.HumanoidRootPart.Position.Z)
+                    moveTo(above)
                 end
-                attack()
-                task.wait(0.1)
+                hrp.CFrame = CFrame.lookAt(hrp.Position, nearest.HumanoidRootPart.Position)
                 attack()
             end
         end)
@@ -128,35 +124,30 @@ end)
 
 MainSection:NewToggle("Auto Farm Level", "Auto quest + farm level enemies", function(state)
     _G.AutoFarmLevel = state
-    while _G.AutoFarmLevel and task.wait(0.3) do
+    while _G.AutoFarmLevel and task.wait(0.2) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
             local area = getLevelArea()
-            if not area then return end
-
-            -- Проверяем квест
             local myLevel = player.Data.Level.Value
-            local questInProgress = false
+
+            -- Ищем квест
             for _, q in pairs(workspace:GetDescendants()) do
                 if q:IsA("Model") and q.Name:lower():find("quest") and q:FindFirstChild("HumanoidRootPart") then
                     local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
-                    if d < 50 then
+                    if d < 30 then
                         local prompt = q:FindFirstChildWhichIsA("ProximityPrompt")
-                        if prompt then
-                            fireproximityprompt(prompt)
-                            questInProgress = true
-                            task.wait(0.5)
-                        end
+                        if prompt then fireproximityprompt(prompt); task.wait(0.3) end
+                    elseif d > 50 then
+                        moveTo(q.HumanoidRootPart.CFrame)
                     end
                 end
             end
 
-            -- Фармим врагов своего уровня
+            -- Ищем врага своего уровня
             local enemies = getEnemies()
-            local target = nil
-            local minDist = math.huge
+            local target, minDist = nil, math.huge
             for _, mob in pairs(enemies) do
                 local mobLvl = mob:FindFirstChild("Level") and mob.Level.Value or myLevel
                 if math.abs(mobLvl - myLevel) <= 10 then
@@ -166,13 +157,14 @@ MainSection:NewToggle("Auto Farm Level", "Auto quest + farm level enemies", func
             end
 
             if not target then
-                -- Телепорт на остров по уровню
-                teleportTo(area.cf)
-            elseif minDist > 6 then
-                teleportTo(target.HumanoidRootPart.CFrame * CFrame.new(0, 3, 4))
-            else
+                moveTo(area.cf)
+            elseif minDist > 10 then
+                local above = CFrame.new(target.HumanoidRootPart.Position.X, target.HumanoidRootPart.Position.Y + 25, target.HumanoidRootPart.Position.Z)
+                moveTo(above)
+                hrp.CFrame = CFrame.lookAt(hrp.Position, target.HumanoidRootPart.Position)
                 attack()
-                task.wait(0.1)
+            else
+                hrp.CFrame = CFrame.lookAt(hrp.Position, target.HumanoidRootPart.Position)
                 attack()
             end
         end)
@@ -226,7 +218,7 @@ local islands = {
 
 for _, data in pairs(islands) do
     TeleportSection:NewButton(data[1], nil, function()
-        pcall(teleportTo, data[2])
+        pcall(moveTo, data[2])
     end)
 end
 
