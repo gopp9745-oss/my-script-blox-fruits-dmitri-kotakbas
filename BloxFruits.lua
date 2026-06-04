@@ -4,6 +4,7 @@ local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
 local player = game.Players.LocalPlayer
 local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local function getEnemies()
     local list = {}
@@ -27,14 +28,28 @@ local function getEnemies()
     return list
 end
 
+local function attack()
+    local char = player.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+    end
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton1(Vector2.new(0, 0))
+end
+
 local function safeTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
-    hrp.Anchored = true
+    local oldCF = hrp.CFrame
+    -- двойной TP: сначала на цель, потом обратно, потом снова на цель
     hrp.CFrame = targetCF
     task.wait(0.1)
-    hrp.Anchored = false
+    hrp.CFrame = oldCF
+    task.wait(0.05)
+    hrp.CFrame = targetCF
 end
 
 -- Main
@@ -43,7 +58,7 @@ local MainSection = MainTab:NewSection("Auto Farm")
 
 MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
     _G.AutoFarm = state
-    while _G.AutoFarm and task.wait(0.2) do
+    while _G.AutoFarm and task.wait(0.15) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -56,14 +71,9 @@ MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
             end
             if nearest and dist < 400 then
                 if dist > 6 then
-                    safeTP(nearest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
+                    safeTP(nearest.HumanoidRootPart.CFrame * CFrame.new(0, 3, 4))
                 end
-                local tool = char:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
-                    task.wait()
-                    tool:Activate()
-                end
+                attack()
             end
         end)
     end
