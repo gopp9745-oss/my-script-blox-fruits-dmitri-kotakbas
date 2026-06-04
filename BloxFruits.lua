@@ -4,39 +4,37 @@ local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
 local player = game.Players.LocalPlayer
 local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-
-local function flyTo(targetCF, speed)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    local dist = (targetCF.Position - hrp.Position).Magnitude
-    local time = math.max(dist / (speed or 250), 0.3)
-    local tween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = targetCF})
-    tween:Play()
-    tween.Completed:Wait()
-end
 
 local function getEnemies()
-    local seen = {}
     local list = {}
     local folder = workspace:FindFirstChild("Enemies")
     if folder then
         for _, v in pairs(folder:GetChildren()) do
-            if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
                 table.insert(list, v)
-                seen[v] = true
             end
         end
     end
     for _, v in pairs(workspace:GetChildren()) do
-        if not seen[v] and v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-            if v.Humanoid.Health > 0 and not v:FindFirstChild("Player") then
-                table.insert(list, v)
+        if v:IsA("Model") and v ~= folder and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+            if not v:FindFirstChild("Player") then
+                local dup = false
+                for _, e in pairs(list) do if e == v then dup = true; break end end
+                if not dup then table.insert(list, v) end
             end
         end
     end
     return list
+end
+
+local function safeTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    hrp.Anchored = true
+    hrp.CFrame = targetCF
+    task.wait(0.1)
+    hrp.Anchored = false
 end
 
 -- Main
@@ -45,7 +43,7 @@ local MainSection = MainTab:NewSection("Auto Farm")
 
 MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
     _G.AutoFarm = state
-    while _G.AutoFarm and task.wait(0.25) do
+    while _G.AutoFarm and task.wait(0.2) do
         pcall(function()
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -57,12 +55,8 @@ MainSection:NewToggle("Auto Farm", "Automatically farm enemies", function(state)
                 if d < dist then dist = d; nearest = mob end
             end
             if nearest and dist < 400 then
-                if dist > 8 then
-                    local targetCF = nearest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-                    local flyTime = math.max(dist / 300, 0.2)
-                    local tween = TweenService:Create(hrp, TweenInfo.new(flyTime, Enum.EasingStyle.Linear), {CFrame = targetCF})
-                    tween:Play()
-                    tween.Completed:Wait()
+                if dist > 6 then
+                    safeTP(nearest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
                 end
                 local tool = char:FindFirstChildOfClass("Tool")
                 if tool then
@@ -89,7 +83,7 @@ MainSection:NewToggle("Auto Quest", "Auto accept and complete quests", function(
                         local p = q:FindFirstChildWhichIsA("ProximityPrompt")
                         if p then fireproximityprompt(p) end
                     elseif d > 40 then
-                        flyTo(q.HumanoidRootPart.CFrame, 300)
+                        safeTP(q.HumanoidRootPart.CFrame)
                     end
                 end
             end
@@ -144,7 +138,7 @@ local islands = {
 
 for _, data in pairs(islands) do
     TeleportSection:NewButton(data[1], nil, function()
-        pcall(flyTo, data[2], 400)
+        pcall(safeTP, data[2])
     end)
 end
 
