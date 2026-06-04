@@ -4,59 +4,115 @@ local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
 local plr = game.Players.LocalPlayer
 local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
 local RunS = game:GetService("RunService")
-local VIM = game:GetService("VirtualInputManager")
 local TweenS = game:GetService("TweenService")
+local TeleS = game:GetService("TeleportService")
+local HttpS = game:GetService("HttpService")
+local VUser = game:GetService("VirtualUser")
+local RigEvent = game:GetService("ReplicatedStorage").RigControllerEvent
+local Validator = game:GetService("ReplicatedStorage").Remotes.Validator
 
---- ENEMY FINDER
-local function findEnemies()
-    local list = {}
+--- CombatFramework init
+local CbFw = debug.getupvalues(require(plr.PlayerScripts.CombatFramework))
+local CbFw2 = CbFw[2]
+
+local function getBlade()
+    local ac = CbFw2.activeController
+    if not ac or not ac.blades then return end
+    local b = ac.blades[1]
+    if b then
+        while b.Parent ~= plr.Character do b = b.Parent end
+    end
+    return b
+end
+
+local function fastAtk()
+    local ac = CbFw2.activeController
+    if not ac then return end
+    local hits = require(game.ReplicatedStorage.CombatFramework.RigLib).getBladeHits(plr.Character, {plr.Character.HumanoidRootPart}, 60)
+    local filtered, seen = {}, {}
+    for _, v in pairs(hits) do
+        if v.Parent and v.Parent:FindFirstChild("HumanoidRootPart") and not seen[v.Parent] then
+            table.insert(filtered, v.Parent.HumanoidRootPart)
+            seen[v.Parent] = true
+        end
+    end
+    if #filtered == 0 then return end
+    local u4 = debug.getupvalue(ac.attack, 4)
+    local u5 = debug.getupvalue(ac.attack, 5)
+    local u6 = debug.getupvalue(ac.attack, 6)
+    local u7 = debug.getupvalue(ac.attack, 7)
+    local r1 = (u5 * 798405 + u4 * 727595) % u6
+    local r2 = u4 * 798405
+    r1 = (r1 * u6 + r2) % 1099511627776
+    u5 = math.floor(r1 / u6)
+    u4 = r1 - u5 * u6
+    u7 = u7 + 1
+    debug.setupvalue(ac.attack, 4, u4)
+    debug.setupvalue(ac.attack, 5, u5)
+    debug.setupvalue(ac.attack, 6, u6)
+    debug.setupvalue(ac.attack, 7, u7)
+    local tool = plr.Character and plr.Character:FindFirstChildOfClass("Tool")
+    if tool and getBlade() then
+        RigEvent:FireServer("weaponChange", tostring(getBlade()))
+        Validator:FireServer(math.floor(r1 / 1099511627776 * 16777215), u7)
+        RigEvent:FireServer("hit", filtered, 1, "")
+    end
+    ac.timeToNextAttack = 0
+    ac.attacking = false
+    ac.hitboxMagnitude = 150
+    ac.humanoid.AutoRotate = true
+end
+
+local function click()
+    pcall(function()
+        VUser:CaptureController()
+        VUser:Button1Down(Vector2.new(0, 1))
+    end)
+end
+
+local function atk()
+    pcall(fastAtk)
+    for _ = 1, 3 do
+        pcall(click)
+        task.wait(0.01)
+    end
+end
+
+--- Movement
+local function fly(pos)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    local d = (pos - hrp.Position).Magnitude
+    if d < 1 then return end
+    local tw = TweenS:Create(hrp, TweenInfo.new(math.clamp(d / 300, 0.2, 2.5), Enum.EasingStyle.Linear), {Position = pos})
+    tw:Play()
+    tw.Completed:Wait()
+end
+
+--- World detection
+local function getWorld()
+    if workspace:FindFirstChild("Map") then
+        if workspace.Map:FindFirstChild("Wood") and workspace.Map.Wood:FindFirstChild("Desert") then return 2 end
+        if workspace.Map:FindFirstChild("Wood") and workspace.Map.Wood:FindFirstChild("Frost") then return 2 end
+    end
+    return 1
+end
+
+--- Enemy helper
+local function getEnemies()
     local e = workspace:FindFirstChild("Enemies")
-    if e then
-        for _, v in pairs(e:GetChildren()) do
-            if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
-                table.insert(list, v)
-            end
+    if not e then return {} end
+    local list = {}
+    for _, v in pairs(e:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+            table.insert(list, v)
         end
     end
     return list
 end
 
---- CLICK
-local function click()
-    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-    task.wait(0.02)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-end
-
---- ATTACK
-local function atk()
-    local char = plr.Character
-    if not char then return end
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        pcall(function() tool:Activate() end)
-    end
-    for _ = 1, 4 do
-        pcall(click)
-        task.wait(0.03)
-    end
-end
-
---- FLY TO
-local function fly(targetPos, spd)
-    spd = spd or 250
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    local dist = (targetPos - hrp.Position).Magnitude
-    if dist < 1 then return end
-    local t = math.clamp(dist / spd, 0.2, 3)
-    local tw = TweenS:Create(hrp, TweenInfo.new(t, Enum.EasingStyle.Linear), {Position = targetPos})
-    tw:Play()
-    tw.Completed:Wait()
-end
-
---- LEVEL MAP
+--- Level map
 local lvlMap = {
     {0,15,"Jungle", CFrame.new(-1242,30,-452)},
     {15,35,"Pirate Village", CFrame.new(-1120,15,510)},
@@ -75,7 +131,8 @@ local lvlMap = {
     {850,950,"Fountain City", CFrame.new(5160,20,3020)},
     {950,1100,"Hydra Island", CFrame.new(5550,25,-520)},
     {1100,1300,"Great Tree", CFrame.new(8700,130,1750)},
-    {1300,2000,"Castle on the Sea", CFrame.new(-5300,20,7000)},
+    {1300,1475,"Castle on the Sea", CFrame.new(-5300,20,7000)},
+    {1475,2000,"Haunted Castle", CFrame.new(-9500,145,6150)},
 }
 
 local function getArea()
@@ -86,55 +143,95 @@ local function getArea()
     return lvlMap[#lvlMap]
 end
 
---- MAIN TAB
-local MTab = Window:NewTab("Main")
-local MS = MTab:NewSection("Farming")
+--- Equip best weapon
+local function equipWeapon()
+    local char = plr.Character
+    if not char then return end
+    local backpack = plr.Backpack
+    local best = char:FindFirstChildOfClass("Tool")
+    if not best or not best:FindFirstChildOfClass("Handle") then
+        for _, v in pairs(backpack:GetChildren()) do
+            if v:IsA("Tool") then
+                best = v
+                break
+            end
+        end
+    end
+    if best then
+        char.Humanoid:EquipTool(best)
+    end
+end
 
-MS:NewToggle("Auto Farm", nil, function(state)
+--- Accept quest
+local function acceptQuest()
+    for _, q in pairs(workspace:GetDescendants()) do
+        if q:IsA("Model") and q.Name:lower():match("quest") and q:FindFirstChild("HumanoidRootPart") then
+            local d = (q.HumanoidRootPart.Position - (plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart.Position or Vector3.zero)).Magnitude
+            if d < 25 then
+                local p = q:FindFirstChildWhichIsA("ProximityPrompt")
+                if p then fireproximityprompt(p); task.wait(0.2) end
+            end
+        end
+    end
+end
+
+--- Bring enemy
+_G.Bring = false
+RunS.Heartbeat:Connect(function()
+    if _G.Bring and _G.Target then
+        pcall(function()
+            _G.Target.HumanoidRootPart.CFrame = (plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")) and CFrame.new(plr.Character.HumanoidRootPart.Position + Vector3.new(0, 15, -10)) or _G.Target.HumanoidRootPart.CFrame
+        end)
+    end
+end)
+
+--- ====================
+--- MAIN TAB
+--- ====================
+local T1 = Window:NewTab("Main")
+local S1 = T1:NewSection("Auto Farm")
+
+S1:NewToggle("Auto Farm", nil, function(state)
     _G.Farm = state
-    while _G.Farm and task.wait(0.12) do
+    while _G.Farm and task.wait(0.1) do
         pcall(function()
             local char = plr.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
-            local enemies = findEnemies()
+            equipWeapon()
+            local enemies = getEnemies()
             local best, bd = nil, math.huge
             for _, e in pairs(enemies) do
                 local d = (e.HumanoidRootPart.Position - hrp.Position).Magnitude
                 if d < bd then bd = d; best = e end
             end
-            if best and bd < 300 then
-                if bd > 7 then
+            if best and bd < 350 then
+                _G.Target = best
+                if bd > 8 then
                     fly(best.HumanoidRootPart.Position + Vector3.new(0, 22, 0))
                 end
                 hrp.CFrame = CFrame.new(hrp.Position, best.HumanoidRootPart.Position)
                 atk()
+            else
+                _G.Target = nil
             end
         end)
     end
+    _G.Target = nil
 end)
 
-MS:NewToggle("Auto Level", nil, function(state)
-    _G.LevelFarm = state
-    while _G.LevelFarm and task.wait(0.2) do
+S1:NewToggle("Auto Level", nil, function(state)
+    _G.LvlFarm = state
+    while _G.LvlFarm and task.wait(0.15) do
         pcall(function()
             local char = plr.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
             local lvl = plr.Data.Level.Value
             local area = getArea()
-            -- quest
-            for _, q in pairs(workspace:GetDescendants()) do
-                if q:IsA("Model") and q.Name:lower():find("quest") and q:FindFirstChild("HumanoidRootPart") then
-                    local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
-                    if d < 20 then
-                        local p = q:FindFirstChildWhichIsA("ProximityPrompt")
-                        if p then fireproximityprompt(p); task.wait(0.3) end
-                    end
-                end
-            end
-            -- enemies by level
-            local enemies = findEnemies()
+            equipWeapon()
+            acceptQuest()
+            local enemies = getEnemies()
             local target, md = nil, math.huge
             for _, e in pairs(enemies) do
                 local el = e:FindFirstChild("Level") and e.Level.Value or lvl
@@ -144,9 +241,11 @@ MS:NewToggle("Auto Level", nil, function(state)
                 end
             end
             if not target then
+                _G.Target = nil
                 fly(area[4].Position)
             else
-                if md > 7 then
+                _G.Target = target
+                if md > 8 then
                     fly(target.HumanoidRootPart.Position + Vector3.new(0, 22, 0))
                 end
                 hrp.CFrame = CFrame.new(hrp.Position, target.HumanoidRootPart.Position)
@@ -154,29 +253,61 @@ MS:NewToggle("Auto Level", nil, function(state)
             end
         end)
     end
+    _G.Target = nil
 end)
 
---- STATS TAB
-local STab = Window:NewTab("Stats")
-local SS = STab:NewSection("Auto Stats")
+S1:NewToggle("Auto Quest", nil, function(state)
+    _G.Quest = state
+    while _G.Quest and task.wait(0.3) do
+        pcall(acceptQuest)
+    end
+end)
 
-for _, s in pairs({"Melee","Defense","Sword","Demon Fruit"}) do
-    local lbl = s == "Demon Fruit" and "Fruit" or s
-    SS:NewToggle("Auto " .. lbl, nil, function(state)
-        _G["S"..s] = state
-        while _G["S"..s] and task.wait(0.3) do
-            pcall(function()
-                if plr.Data.StatPoints.Value > 0 then
-                    CommF:InvokeServer("AddPoint", s, 1)
-                end
-            end)
-        end
+S1:NewToggle("Bring Enemy", nil, function(state)
+    _G.Bring = state
+    if not state then _G.Target = nil end
+end)
+
+--- ====================
+--- STATS TAB
+--- ====================
+local T2 = Window:NewTab("Stats")
+local S2 = T2:NewSection("Auto Points")
+
+local stats = {"Melee","Defense","Sword","Demon Fruit"}
+for _, s in pairs(stats) do
+    S2:NewToggle("Auto " .. s, nil, function(state)
+        _G["S" .. s:gsub(" ","")] = state
+        coroutine.wrap(function()
+            while _G["S" .. s:gsub(" ","")] and task.wait(0.3) do
+                pcall(function()
+                    if plr.Data.StatPoints.Value > 0 then
+                        CommF:InvokeServer("AddPoint", s, tonumber(plr.Data.StatPoints.Value))
+                    end
+                end)
+            end
+        end)()
     end)
 end
 
+S2:NewButton("Melee > 1:1:1:1", nil, function()
+    pcall(function()
+        local p = plr.Data.StatPoints.Value
+        if p and p > 0 then
+            local each = math.floor(p / 4)
+            CommF:InvokeServer("AddPoint", "Melee", each)
+            CommF:InvokeServer("AddPoint", "Defense", each)
+            CommF:InvokeServer("AddPoint", "Sword", each)
+            CommF:InvokeServer("AddPoint", "Demon Fruit", each)
+        end
+    end)
+end)
+
+--- ====================
 --- TELEPORT TAB
-local TTab = Window:NewTab("Teleports")
-local TS = TTab:NewSection("Islands")
+--- ====================
+local T3 = Window:NewTab("Teleports")
+local S3 = T3:NewSection("Islands")
 
 local islands = {
     {"Jungle", CFrame.new(-1242,30,-452)},
@@ -198,10 +329,13 @@ local islands = {
     {"Hydra Island", CFrame.new(5550,25,-520)},
     {"Great Tree", CFrame.new(8700,130,1750)},
     {"Castle on the Sea", CFrame.new(-5300,20,7000)},
+    {"Haunted Castle", CFrame.new(-9500,145,6150)},
+    {"Ice Castle", CFrame.new(-5100,75,-7800)},
+    {"Forgotten Island", CFrame.new(-3000,10,-6500)},
 }
 
 for _, d in pairs(islands) do
-    TS:NewButton(d[1], nil, function()
+    S3:NewButton(d[1], nil, function()
         pcall(function()
             local char = plr.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -211,19 +345,18 @@ for _, d in pairs(islands) do
     end)
 end
 
+--- ====================
 --- MISC TAB
-local MiTab = Window:NewTab("Misc")
-local MiS = MiTab:NewSection("Utilities")
+--- ====================
+local T4 = Window:NewTab("Misc")
+local S4 = T4:NewSection("Utilities")
 
-MiS:NewButton("Rejoin", nil, function()
-    game:GetService("TeleportService"):Teleport(game.PlaceId, plr)
-end)
-
-MiS:NewButton("Server Hop", nil, function()
-    local d = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
+S4:NewButton("Rejoin", nil, function() TeleS:Teleport(game.PlaceId, plr) end)
+S4:NewButton("Server Hop", nil, function()
+    local d = HttpS:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
     for _, v in pairs(d.data) do
         if v.playing < v.maxPlayers and v.id ~= game.JobId then
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, plr)
+            TeleS:TeleportToPlaceInstance(game.PlaceId, v.id, plr)
             break
         end
     end
@@ -238,9 +371,17 @@ RunS.Heartbeat:Connect(function()
         char.Humanoid.JumpPower = _G.JP
     end
 end)
+S4:NewSlider("Walk Speed", nil, 250, 16, function(s) _G.WS = s end)
+S4:NewSlider("Jump Power", nil, 500, 50, function(s) _G.JP = s end)
 
-MiS:NewSlider("Walk Speed", nil, 250, 16, function(s) _G.WS = s end)
-MiS:NewSlider("Jump Power", nil, 500, 50, function(s) _G.JP = s end)
+--- Teleports section in Misc
+local S4b = T4:NewSection("Quick Teleports")
+S4b:NewButton("Start Island", nil, function()
+    pcall(function() if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then fly(Vector3.new(0, 10, 0)) end end)
+end)
+S4b:NewButton("Middle Town", nil, function()
+    pcall(function() if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then fly(Vector3.new(-80, 10, 1250)) end end)
+end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Blox Fruits",
