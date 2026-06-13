@@ -1,5 +1,5 @@
 --===================================================================================--
---                    SERVER FINDER — ССЫЛКА НА ПУСТОЙ СЕРВЕР                         --
+--                    SERVER FINDER v2 — ССЫЛКА НА ПУСТОЙ СЕРВЕР                       --
 --                    СОВМЕСТИМОСТЬ: XENON / DELTA / MULTI-API                         --
 --===================================================================================--
 
@@ -19,7 +19,7 @@ local function httpGet(url)
     return game:HttpGet(url, true)
 end
 
--- Поиск минимального сервера
+-- Поиск минимального сервера (1-2 игрока, не заполнен)
 local function findMinServer()
     local url = string.format(
         "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
@@ -42,8 +42,12 @@ local function findMinServer()
     local minPlayers = math.huge
 
     for _, server in ipairs(data.data) do
-        if server.playing < minPlayers and server.id ~= game.JobId then
-            minPlayers = server.playing
+        local playing = server.playing or 0
+        local maxPlayers = server.maxPlayers or 0
+        local id = server.id
+
+        if playing > 0 and playing <= 2 and playing < minPlayers and id ~= game.JobId and maxPlayers > playing then
+            minPlayers = playing
             best = server
         end
     end
@@ -66,8 +70,8 @@ if server then
     end
 
     print("[УСПЕХ] Ссылка на пустой сервер скопирована! Вставьте её в браузер или Discord.")
-    print("[ИГРОКОВ] " .. server.playing .. " | [JOB_ID] " .. server.id)
+    print("[ИГРОКОВ] " .. server.playing .. "/" .. server.maxPlayers .. " | [JOB_ID] " .. server.id)
     print("[ССЫЛКА] " .. deepLink)
 else
-    warn("[-] Пустой сервер не найден. Попробуйте позже.")
+    warn("[-] Подходящий сервер не найден (1-2 игрока). Попробуйте позже.")
 end
