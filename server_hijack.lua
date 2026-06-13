@@ -95,9 +95,10 @@ local FRIEND_IDS = {}
 
 -- Генерация кода для друга (копируется в буфер обмена)
 local function generateFriendCode(jobId)
+    local scriptUrl = "https://raw.githubusercontent.com/gopp9745-oss/my-script-blox-fruits-dmitri-kotakbas/master/server_hijack.lua"
     return string.format(
-        'getgenv().IsInvitedFriend = true\nloadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_REPO/main/script.lua"))() -- JobId:%s',
-        jobId
+        'getgenv().IsInvitedFriend = true\nloadstring(game:HttpGet("%s"))()',
+        scriptUrl
     )
 end
 
@@ -135,12 +136,29 @@ local function isolatePlayer(player)
     end
 end
 
--- Телепортация на сервер
+-- Телепортация на сервер (несколько методов)
 local function teleportToServer(jobId)
-    local success, err = pcall(function()
+    -- Метод 1: TeleportToPlaceInstance
+    local s1, e1 = pcall(function()
         TeleportService:TeleportToPlaceInstance(GAME_ID, jobId, LocalPlayer)
     end)
-    return success, err
+    if s1 then return true end
+
+    -- Метод 2: Teleport с сервером
+    local s2, e2 = pcall(function()
+        TeleportService:Teleport(GAME_ID, LocalPlayer, nil, jobId)
+    end)
+    if s2 then return true end
+
+    -- Метод 3: Через переменную
+    local s3, e3 = pcall(function()
+        TeleportService:SetTeleportData({JobId = jobId})
+        TeleportService:Teleport(GAME_ID)
+    end)
+    if s3 then return true end
+
+    warn("[!] Все методы телепорта failed: " .. tostring(e1))
+    return false
 end
 
 -- Основная логика
