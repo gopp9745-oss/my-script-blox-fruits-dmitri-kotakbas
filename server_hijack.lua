@@ -136,17 +136,36 @@ local function isolatePlayer(player)
     end
 end
 
--- Телепортация на найденный сервер через TeleportData
+-- Телепортация через deep link (roblox:// протокол)
 local function teleportToServer(jobId)
-    local s, e = pcall(function()
-        local targetServerData = {
-            ServerId = jobId
-        }
-        TeleportService:Teleport(GAME_ID, LocalPlayer, targetServerData)
-    end)
-    if s then return true end
+    -- Копируем флаг друга перед прыжком
+    local friendCode = "getgenv().IsInvitedFriend = true"
+    toClipboard(friendCode)
 
-    warn("[!] Телепорт не удался: " .. tostring(e))
+    local deepLink = string.format(
+        "roblox://experiences/start?placeId=%d&gameInstanceId=%s",
+        GAME_ID,
+        jobId
+    )
+
+    local s, e = pcall(function()
+        local gui = game:GetService("GuiService")
+        gui:OpenBrowserWindow(deepLink)
+    end)
+
+    if s then
+        print("[+] Deep link открыт: " .. deepLink)
+        return true
+    end
+
+    warn("[!] Deep link не сработал: " .. tostring(e))
+
+    -- Фоллбэк: обычный Teleport
+    local s2, e2 = pcall(function()
+        TeleportService:Teleport(GAME_ID, LocalPlayer, {ServerId = jobId})
+    end)
+    if s2 then return true end
+
     return false
 end
 
