@@ -136,33 +136,33 @@ local function isolatePlayer(player)
     end
 end
 
--- Телепортация на сервер (несколько методов)
+-- Телепортация на найденный сервер через TeleportData
 local function teleportToServer(jobId)
-    -- Метод 1: TeleportToPlaceInstance
-    local s1, e1 = pcall(function()
-        TeleportService:TeleportToPlaceInstance(GAME_ID, jobId, LocalPlayer)
+    local s, e = pcall(function()
+        local targetServerData = {
+            ServerId = jobId
+        }
+        TeleportService:Teleport(GAME_ID, LocalPlayer, targetServerData)
     end)
-    if s1 then return true end
+    if s then return true end
 
-    -- Метод 2: Teleport с сервером
-    local s2, e2 = pcall(function()
-        TeleportService:Teleport(GAME_ID, LocalPlayer, nil, jobId)
-    end)
-    if s2 then return true end
-
-    -- Метод 3: Через переменную
-    local s3, e3 = pcall(function()
-        TeleportService:SetTeleportData({JobId = jobId})
-        TeleportService:Teleport(GAME_ID)
-    end)
-    if s3 then return true end
-
-    warn("[!] Все методы телепорта failed: " .. tostring(e1))
+    warn("[!] Телепорт не удался: " .. tostring(e))
     return false
 end
 
 -- Основная логика
 local function main()
+    -- Читаем TeleportData (получено при прыжке)
+    local teleportData = nil
+    pcall(function()
+        teleportData = TeleportService:GetLocalTeleportData()
+    end)
+
+    if teleportData and teleportData.ServerId then
+        print("[+] Прибыли на целевой сервер: " .. teleportData.ServerId)
+        print("[+] Текущий JobId: " .. game.JobId)
+    end
+
     print("[*] Поиск пустого сервера...")
     
     local server = findEmptyServer()
