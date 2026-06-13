@@ -1,13 +1,12 @@
 --===================================================================================--
---                    SERVER FINDER — ССЫЛКА НА ПУСТОЙ СЕРВЕР                         --
+--                    SERVER FINDER — ВАЛИДАЦИЯ ЖИВЫХ СЕРВЕРОВ                        --
 --                    СОВМЕСТИМОСТЬ: XENON / DELTA / MULTI-API                         --
 --===================================================================================--
 
-local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local PlaceId = game.PlaceId
 
-print("[SERVER FINDER] Поиск сервера с 1-2 игроками для PlaceId: " .. PlaceId)
+print("[SERVER FINDER] Поиск живого публичного сервера для PlaceId: " .. PlaceId)
 
 -- HTTP запрос с авто-определением API
 local function httpGet(url)
@@ -19,8 +18,8 @@ local function httpGet(url)
     return game:HttpGet(url, true)
 end
 
--- Поиск сервера с 1-2 игроками
-local function findMinServer()
+-- Поиск с валидацией
+local function findValidServer()
     local url = string.format(
         "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
         PlaceId
@@ -41,15 +40,21 @@ local function findMinServer()
     local best = nil
     local minPlayers = math.huge
 
-    for _, server in ipairs(data.data) do
-        local playing = server.playing
-        local maxPlayers = server.maxPlayers or 100
-        
-        -- Ищем серверы с 1-2 игроками, не заполненные
-        if playing > 0 and playing <= 2 and playing < maxPlayers and server.id ~= game.JobId then
+    for _, v in ipairs(data.data) do
+        local playing = v.playing
+        local ping = v.ping
+        local jobId = v.id
+
+        -- ЖЕСТКИЕ ФИЛЬТРЫ
+        if playing == 0 then
+            print("[ФИЛЬТР] Пропущен приватный/служебный (0 игроков): " .. jobId)
+        elseif not ping or ping == 0 then
+            print("[ФИЛЬТР] Пропущен недоступный (нет пинга): " .. jobId)
+        elseif playing >= 1 and playing <= 3 and ping > 0 then
+            print("[ВАЛИД] Живой сервер: " .. playing .. " игр., пинг " .. ping .. " | " .. jobId)
             if playing < minPlayers then
                 minPlayers = playing
-                best = server
+                best = v
             end
         end
     end
@@ -58,7 +63,7 @@ local function findMinServer()
 end
 
 -- Основная логика
-local server = findMinServer()
+local server = findValidServer()
 
 if server then
     local deepLink = string.format(
@@ -71,9 +76,9 @@ if server then
         setclipboard(deepLink)
     end
 
-    print("[УСПЕХ] Ссылка на сервер скопирована! Вставьте её в браузер или Discord.")
-    print("[ИГРОКОВ] " .. server.playing .. "/" .. (server.maxPlayers or "?") .. " | [JOB_ID] " .. server.id)
+    print("[УСПЕХ] Найдена живая публичная локация с " .. server.playing .. " игр.")
+    print("[PING] " .. server.ping .. "ms | [JOB_ID] " .. server.id)
     print("[ССЫЛКА] " .. deepLink)
 else
-    warn("[-] Подходящий сервер не найден (нужно 1-2 игрока). Попробуйте позже.")
+    warn("[-] Живой публичный сервер не найден. Все инстансы 0 игроков или недоступны.")
 end
