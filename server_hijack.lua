@@ -1,19 +1,14 @@
 --===================================================================================--
---                       SERVER HIJACK v2 — LOCAL ISOLATION ONLY                      --
+--                       SERVER HIJACK v3 — LOCAL ISOLATION                          --
 --                       СОВМЕСТИМОСТЬ: XENON / DELTA / MULTI-API                     --
---                                                                                   --
---  Инициатор заходит на сервер вручную → запускает скрипт →                        --
---  копируется код для друга → рандомы изолируются на клиенте                        --
 --===================================================================================--
 
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local PlaceId = game.PlaceId
 local JobId = game.JobId
 
-print("[SERVER HIJACK] Режим: Local Isolation Only")
-print("[SERVER HIJACK] Текущий сервер: " .. JobId)
+print("[SERVER HIJACK] Сервер: " .. JobId)
 
 --===================================================================================--
 --                         ГЕНЕРАЦИЯ КОДА ДЛЯ ДРУГА                                  --
@@ -21,7 +16,6 @@ print("[SERVER HIJACK] Текущий сервер: " .. JobId)
 
 local function generateFriendCode()
     local code = string.format([[
-        -- Вставь этот код в Xenon/Delta чтобы попасть на сервер к другу
         getgenv().IsInvitedFriend = true
         game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game.Players.LocalPlayer)
     ]], PlaceId, JobId)
@@ -33,8 +27,6 @@ local function generateFriendCode()
         warn("[-] setclipboard недоступен. Скопируй вручную:")
         print(code)
     end
-
-    print("[+] Раздай этот код друзьям — они попадут на твой сервер")
 end
 
 --===================================================================================--
@@ -49,9 +41,8 @@ local function isolatePlayer(player)
     if getgenv().IsInvitedFriend and player ~= LocalPlayer then return end
 
     local function processCharacter(char)
-        task.wait(0.3)
-        local hrp = char:WaitForChild("HumanoidRootPart", 5)
-        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:WaitForChild("HumanoidRootPart", 10)
+        local hum = char:WaitForChild("Humanoid", 10)
 
         if hrp then
             hrp.CFrame = CFrame.new(0, -99999, 0)
@@ -61,13 +52,13 @@ local function isolatePlayer(player)
         end
 
         task.spawn(function()
-            task.wait(0.1)
+            task.wait(0.2)
             pcall(function() char:Destroy() end)
         end)
     end
 
     if player.Character then
-        processCharacter(player.Character)
+        task.spawn(processCharacter, player.Character)
     end
     player.CharacterAdded:Connect(processCharacter)
 
@@ -78,26 +69,24 @@ end
 --                              ОСНОВНАЯ ЛОГИКА                                       --
 --===================================================================================--
 
--- Генерируем код для друга
+-- 1. Генерируем код для друга
 generateFriendCode()
 
--- Изолируем уже присутствующих рандомов
+-- 2. Изолируем уже присутствующих рандомов
 for _, player in ipairs(Players:GetPlayers()) do
     isolatePlayer(player)
 end
 
--- Отслеживаем новых входящих
-Players.PlayerAdded:Connect(function(player)
-    task.wait(0.5)
-    isolatePlayer(player)
+-- 3. Отслеживаем новых входящих
+Players.PlayerAdded:Connect(isolatePlayer)
 
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Приватный Сервер";
-            Text = player.Name .. " изолирован";
-            Duration = 3
-        })
-    end)
+-- 4. Уведомление
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Приватный Сервер";
+        Text = "Сервер заблокирован. Код в буфере обмена.";
+        Duration = 5
+    })
 end)
 
 print("[+] Сервер заблокирован для посторонних")
