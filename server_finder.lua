@@ -1,5 +1,5 @@
 --===================================================================================--
---                    SERVER FINDER v2 — ССЫЛКА НА ПУСТОЙ СЕРВЕР                       --
+--                    SERVER FINDER — ССЫЛКА НА ПУСТОЙ СЕРВЕР                         --
 --                    СОВМЕСТИМОСТЬ: XENON / DELTA / MULTI-API                         --
 --===================================================================================--
 
@@ -7,7 +7,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local PlaceId = game.PlaceId
 
-print("[SERVER FINDER] Поиск пустого сервера для PlaceId: " .. PlaceId)
+print("[SERVER FINDER] Поиск сервера с 1-2 игроками для PlaceId: " .. PlaceId)
 
 -- HTTP запрос с авто-определением API
 local function httpGet(url)
@@ -19,7 +19,7 @@ local function httpGet(url)
     return game:HttpGet(url, true)
 end
 
--- Поиск минимального сервера (1-2 игрока, не заполнен)
+-- Поиск сервера с 1-2 игроками
 local function findMinServer()
     local url = string.format(
         "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
@@ -42,13 +42,15 @@ local function findMinServer()
     local minPlayers = math.huge
 
     for _, server in ipairs(data.data) do
-        local playing = server.playing or 0
-        local maxPlayers = server.maxPlayers or 0
-        local id = server.id
-
-        if playing > 0 and playing <= 2 and playing < minPlayers and id ~= game.JobId and maxPlayers > playing then
-            minPlayers = playing
-            best = server
+        local playing = server.playing
+        local maxPlayers = server.maxPlayers or 100
+        
+        -- Ищем серверы с 1-2 игроками, не заполненные
+        if playing > 0 and playing <= 2 and playing < maxPlayers and server.id ~= game.JobId then
+            if playing < minPlayers then
+                minPlayers = playing
+                best = server
+            end
         end
     end
 
@@ -69,9 +71,9 @@ if server then
         setclipboard(deepLink)
     end
 
-    print("[УСПЕХ] Ссылка на пустой сервер скопирована! Вставьте её в браузер или Discord.")
-    print("[ИГРОКОВ] " .. server.playing .. "/" .. server.maxPlayers .. " | [JOB_ID] " .. server.id)
+    print("[УСПЕХ] Ссылка на сервер скопирована! Вставьте её в браузер или Discord.")
+    print("[ИГРОКОВ] " .. server.playing .. "/" .. (server.maxPlayers or "?") .. " | [JOB_ID] " .. server.id)
     print("[ССЫЛКА] " .. deepLink)
 else
-    warn("[-] Подходящий сервер не найден (1-2 игрока). Попробуйте позже.")
+    warn("[-] Подходящий сервер не найден (нужно 1-2 игрока). Попробуйте позже.")
 end
