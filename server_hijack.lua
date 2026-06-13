@@ -9,6 +9,8 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 
+print("[SERVER HIJACK] Скрипт загружен!")
+
 local ACCESS_KEY = "FRIEND_KEY_2024"
 local GAME_ID = game.PlaceId
 
@@ -35,6 +37,10 @@ local function httpGet(url)
         local resp = syn.request({Url = url, Method = "GET"})
         return resp and resp.Body
     end
+    local s, r = pcall(function()
+        return game:HttpGet(url, true)
+    end)
+    if s and r then return r end
     return HttpService:GetAsync(url)
 end
 
@@ -204,4 +210,7 @@ local function main()
 end
 
 -- Запуск
-main()
+local ok, err = pcall(main)
+if not ok then
+    warn("[SERVER HIJACK] ОШИБКА: " .. tostring(err))
+end
