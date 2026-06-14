@@ -1,5 +1,5 @@
 --[[
-    Auto Ken Training v3.0
+    Auto Ken Training v3.1
     Blox Fruits — Auto Observation Haki V1 Training
     Executor: Xeno / Delta
     NO external dependencies
@@ -21,6 +21,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local plr = Players.LocalPlayer
 
 -- ==================== LOCATIONS ====================
@@ -42,7 +43,7 @@ local locations = {
     {"Fountain City",    CFrame.new(5160, 20, 3020),      "900-1050"},
     {"Hydra Island",     CFrame.new(5550, 25, -520),      "1050-1200"},
     {"Great Tree",       CFrame.new(8700, 130, 1750),     "1200-1450"},
-    {"Castle on the Sea",CFrame.new(-5300, 20, 7000),     "1450-1700"},
+    {"Castle on Sea",    CFrame.new(-5300, 20, 7000),     "1450-1700"},
     {"Haunted Castle",   CFrame.new(-9500, 145, 6150),    "1700+"},
 }
 
@@ -54,17 +55,16 @@ local function getLocationCF(name)
 end
 
 -- ==================== COLORS ====================
-local C_BG      = Color3.fromRGB(18, 18, 30)
-local C_BG2     = Color3.fromRGB(24, 24, 42)
-local C_BG3     = Color3.fromRGB(30, 30, 50)
-local C_ACC     = Color3.fromRGB(70, 130, 255)
-local C_ACC2    = Color3.fromRGB(100, 160, 255)
-local C_TXT     = Color3.fromRGB(220, 225, 240)
-local C_DIM     = Color3.fromRGB(140, 145, 170)
-local C_GRN     = Color3.fromRGB(80, 220, 120)
-local C_RED     = Color3.fromRGB(240, 80, 80)
-local C_ON      = Color3.fromRGB(60, 180, 100)
-local C_OFF     = Color3.fromRGB(80, 80, 100)
+local C_BG   = Color3.fromRGB(18, 18, 30)
+local C_BG2  = Color3.fromRGB(24, 24, 42)
+local C_BG3  = Color3.fromRGB(30, 30, 50)
+local C_ACC  = Color3.fromRGB(70, 130, 255)
+local C_ACC2 = Color3.fromRGB(100, 160, 255)
+local C_TXT  = Color3.fromRGB(220, 225, 240)
+local C_DIM  = Color3.fromRGB(140, 145, 170)
+local C_RED  = Color3.fromRGB(240, 80, 80)
+local C_ON   = Color3.fromRGB(60, 180, 100)
+local C_OFF  = Color3.fromRGB(80, 80, 100)
 
 -- ==================== HELPERS ====================
 local function getHRP()
@@ -80,127 +80,9 @@ local function waitForChar()
     return nil
 end
 
-local function findObservationTool()
-    local bp = plr:FindFirstChild("Backpack")
-    local ch = plr.Character
-    if not bp then return nil end
-
-    local searchExact = {"Observation", "Ken", "Ken Observation", "Observation V1", "Observation Haki"}
-    for _, name in ipairs(searchExact) do
-        local t = bp:FindFirstChild(name) or (ch and ch:FindFirstChild(name))
-        if t then return t end
-    end
-
-    for _, obj in ipairs(bp:GetChildren()) do
-        if obj:IsA("Tool") then
-            local n = obj.Name:lower()
-            if n:find("ken") or n:find("obs") then return obj end
-        end
-    end
-    if ch then
-        for _, obj in ipairs(ch:GetChildren()) do
-            if obj:IsA("Tool") then
-                local n = obj.Name:lower()
-                if n:find("ken") or n:find("obs") then return obj end
-            end
-        end
-    end
-    return nil
-end
-
-local function activateObservation()
-    local ch = waitForChar()
-    if not ch then return false, "No character" end
-
-    local tool = findObservationTool()
-    if tool then
-        local hum = ch:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:EquipTool(tool)
-            task.wait(0.4)
-        end
-
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-        task.wait(0.12)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-        task.wait(0.3)
-
-        return true, "Tool activated"
-    end
-
-    local ok, err = pcall(function()
-        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
-        if remotes then
-            local commF = remotes:FindFirstChild("CommF_")
-            if commF then
-                commF:InvokeServer("KenSwitch")
-                task.wait(0.4)
-                commF:InvokeServer("KenOn")
-                task.wait(0.3)
-            end
-        end
-    end)
-
-    for _, key in ipairs({Enum.KeyCode.F, Enum.KeyCode.G, Enum.KeyCode.H}) do
-        VirtualInputManager:SendKeyEvent(true, key, false, game)
-        task.wait(0.08)
-        VirtualInputManager:SendKeyEvent(false, key, false, game)
-        task.wait(0.15)
-    end
-
-    return ok, err
-end
-
-local function isObservationActive()
-    local ch = waitForChar()
-    if not ch then return false end
-
-    local tool = ch:FindFirstChildOfClass("Tool")
-    if tool then
-        local n = tool.Name:lower()
-        if n:find("obs") or n:find("ken") then return true end
-    end
-
-    local pg = plr:FindFirstChild("PlayerGui")
-    if pg then
-        for _, g in ipairs(pg:GetDescendants()) do
-            if g:IsA("Frame") and g.Name:lower():find("observation") then
-                return true
-            end
-        end
-    end
-
-    local data = plr:FindFirstChild("Data")
-    if data then
-        local ken = data:FindFirstChild("Ken") or data:FindFirstChild("Observation")
-        if ken and type(ken.Value) == "number" and ken.Value > 0 then
-            return true
-        end
-    end
-
-    return false
-end
-
-local function findBestTarget()
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return nil end
+local function teleportTo(cf)
     local hrp = getHRP()
-    if not hrp then return nil end
-
-    local best, bestScore = nil, -math.huge
-    for _, e in ipairs(enemies:GetChildren()) do
-        local hum = e:FindFirstChild("Humanoid")
-        local ehrp = e:FindFirstChild("HumanoidRootPart")
-        if hum and ehrp and hum.Health > 0 then
-            local dist = (ehrp.Position - hrp.Position).Magnitude
-            local lvl = 0
-            local lv = e:FindFirstChild("Level")
-            if lv then lvl = lv.Value end
-            local score = lvl * 2 - dist * 0.3
-            if score > bestScore then bestScore = score; best = e end
-        end
-    end
-    return best
+    if hrp then hrp.CFrame = cf + Vector3.new(0, 5, 0) end
 end
 
 local function flyTo(pos, offset)
@@ -209,19 +91,137 @@ local function flyTo(pos, offset)
     local target = pos + Vector3.new(0, offset or 0, 0)
     local d = (target - hrp.Position).Magnitude
     if d < 2 then return end
-    local speed = math.clamp(d / 250, 0.15, 2)
-    local tw = TweenService:Create(hrp, TweenInfo.new(speed, Enum.EasingStyle.Linear), {
-        Position = target
-    })
+    local tw = TweenService:Create(hrp, TweenInfo.new(math.clamp(d / 250, 0.15, 2), Enum.EasingStyle.Linear), {Position = target})
     tw:Play()
     tw.Completed:Wait()
 end
 
-local function teleportTo(cf)
-    local hrp = getHRP()
-    if hrp then
-        hrp.CFrame = cf + Vector3.new(0, 5, 0)
+-- ==================== OBSERVATION ACTIVATION ====================
+local function debugTools()
+    local result = {}
+    local bp = plr:FindFirstChild("Backpack")
+    local ch = plr.Character
+    if bp then
+        for _, obj in ipairs(bp:GetChildren()) do
+            if obj:IsA("Tool") then
+                table.insert(result, "BP: " .. obj.Name)
+            end
+        end
     end
+    if ch then
+        for _, obj in ipairs(ch:GetChildren()) do
+            if obj:IsA("Tool") then
+                table.insert(result, "Char: " .. obj.Name)
+            end
+        end
+    end
+    return result
+end
+
+local function findAllKenTools()
+    local tools = {}
+    local bp = plr:FindFirstChild("Backpack")
+    local ch = plr.Character
+
+    local function checkContainer(cont)
+        if not cont then return end
+        for _, obj in ipairs(cont:GetChildren()) do
+            if obj:IsA("Tool") then
+                local n = obj.Name:lower()
+                if n:find("ken") or n:find("obs") or n:find("haki") or n:find("observation") then
+                    table.insert(tools, obj)
+                end
+            end
+        end
+    end
+
+    checkContainer(bp)
+    checkContainer(ch)
+
+    if #tools == 0 then
+        if bp then
+            for _, obj in ipairs(bp:GetChildren()) do
+                if obj:IsA("Tool") then table.insert(tools, obj) end
+            end
+        end
+        if ch then
+            for _, obj in ipairs(ch:GetChildren()) do
+                if obj:IsA("Tool") then table.insert(tools, obj) end
+            end
+        end
+    end
+
+    return tools
+end
+
+local function activateObservation()
+    local ch = waitForChar()
+    if not ch then return false, "No character" end
+    local hum = ch:FindFirstChildOfClass("Humanoid")
+    if not hum then return false, "No humanoid" end
+
+    local kenTools = findAllKenTools()
+    print("[Ken] Found tools: " .. #kenTools)
+    for _, t in ipairs(kenTools) do
+        print("[Ken]   -> " .. t.Name)
+    end
+
+    for _, tool in ipairs(kenTools) do
+        pcall(function()
+            hum:EquipTool(tool)
+            task.wait(0.5)
+        end)
+
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            task.wait(0.1)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            task.wait(0.2)
+        end)
+
+        for _, key in ipairs({Enum.KeyCode.F, Enum.KeyCode.G, Enum.KeyCode.H, Enum.KeyCode.J, Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three}) do
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, key, false, game)
+                task.wait(0.06)
+                VirtualInputManager:SendKeyEvent(false, key, false, game)
+                task.wait(0.1)
+            end)
+        end
+
+        task.wait(0.3)
+    end
+
+    pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes then
+            local commands = {"KenSwitch", "KenOn", "KenToggle", "Observation", "ActivateObservation", "Ken"}
+            for _, cmd in ipairs(commands) do
+                local remote = remotes:FindFirstChild(cmd)
+                if remote then
+                    print("[Ken] Found remote: " .. cmd)
+                    if remote:IsA("RemoteEvent") then
+                        remote:FireServer()
+                    elseif remote:IsA("RemoteFunction") then
+                        remote:InvokeServer()
+                    end
+                    task.wait(0.3)
+                end
+            end
+
+            local commF = remotes:FindFirstChild("CommF_")
+            if commF then
+                local args = {"KenSwitch", "KenOn", "KenToggle", "Observation", "Ken", "KenHaki"}
+                for _, arg in ipairs(args) do
+                    pcall(function()
+                        commF:InvokeServer(arg)
+                        task.wait(0.2)
+                    end)
+                end
+            end
+        end
+    end)
+
+    return true, "Attempted activation"
 end
 
 -- ==================== STATS ====================
@@ -242,14 +242,13 @@ mainGui.Parent = CoreGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "Main"
-mainFrame.Size = UDim2.new(0, 300, 0, 420)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -210)
+mainFrame.Size = UDim2.new(0, 300, 0, 440)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -220)
 mainFrame.BackgroundColor3 = C_BG
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = mainGui
-
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
 
 local mainStroke = Instance.new("UIStroke", mainFrame)
@@ -271,10 +270,10 @@ titleFix.BackgroundColor3 = C_BG2
 titleFix.BorderSizePixel = 0
 titleFix.Parent = titleBar
 
-Instance.new("TextLabel", titleBar).Size = UDim2.new(1, -36, 1, 0)
-local tLbl = titleBar:FindFirstChildOfClass("TextLabel")
+local tLbl = Instance.new("TextLabel", titleBar)
+tLbl.Size = UDim2.new(1, -36, 1, 0)
 tLbl.BackgroundTransparency = 1
-tLbl.Text = "Ken Training v3.0"
+tLbl.Text = "Ken Training v3.1"
 tLbl.TextColor3 = C_ACC2
 tLbl.Font = Enum.Font.GothamBold
 tLbl.TextSize = 14
@@ -293,7 +292,6 @@ closeBtn.BorderSizePixel = 0
 closeBtn.Parent = titleBar
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 5)
 
--- Content area
 local content = Instance.new("ScrollingFrame")
 content.Name = "Content"
 content.Size = UDim2.new(1, -16, 1, -42)
@@ -305,25 +303,18 @@ content.ScrollBarImageColor3 = C_ACC
 content.CanvasSize = UDim2.new(0, 0, 0, 0)
 content.AutomaticCanvasSize = Enum.AutomaticSize.Y
 content.Parent = mainFrame
-
-local cLayout = Instance.new("UIListLayout")
-cLayout.Padding = UDim.new(0, 5)
-cLayout.Parent = content
-
-local cPad = Instance.new("UIPadding")
-cPad.PaddingTop = UDim.new(0, 2)
-cPad.PaddingBottom = UDim.new(0, 6)
-cPad.Parent = content
+Instance.new("UIListLayout", content).Padding = UDim.new(0, 5)
+Instance.new("UIPadding", content).PaddingBottom = UDim.new(0, 6)
 
 -- ==================== UI BUILDERS ====================
 local function makeSection(parent, text)
     local f = Instance.new("TextLabel")
-    f.Size = UDim2.new(1, 0, 0, 20)
+    f.Size = UDim2.new(1, 0, 0, 22)
     f.BackgroundTransparency = 1
     f.Text = text
     f.TextColor3 = C_ACC2
     f.Font = Enum.Font.GothamBold
-    f.TextSize = 12
+    f.TextSize = 13
     f.TextXAlignment = Enum.TextXAlignment.Left
     f.Parent = parent
     return f
@@ -342,9 +333,17 @@ local function makeLabel(parent, text)
     return f
 end
 
+local function makeDivider(parent)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, 1)
+    f.BackgroundColor3 = C_BG3
+    f.BorderSizePixel = 0
+    f.Parent = parent
+end
+
 local function makeToggle(parent, text, default, cb)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.Size = UDim2.new(1, 0, 0, 32)
     frame.BackgroundColor3 = C_BG3
     frame.BorderSizePixel = 0
     frame.Parent = parent
@@ -362,15 +361,15 @@ local function makeToggle(parent, text, default, cb)
     lbl.Parent = frame
 
     local tog = Instance.new("TextButton")
-    tog.Size = UDim2.new(0, 40, 0, 18)
-    tog.Position = UDim2.new(1, -48, 0.5, -9)
+    tog.Size = UDim2.new(0, 42, 0, 20)
+    tog.Position = UDim2.new(1, -50, 0.5, -10)
     tog.BorderSizePixel = 0
     tog.Text = ""
     tog.Parent = frame
     Instance.new("UICorner", tog).CornerRadius = UDim.new(1, 0)
 
     local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 14, 0, 14)
+    dot.Size = UDim2.new(0, 16, 0, 16)
     dot.BorderSizePixel = 0
     dot.Parent = tog
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
@@ -379,21 +378,16 @@ local function makeToggle(parent, text, default, cb)
     local function update()
         tog.BackgroundColor3 = state and C_ON or C_OFF
         TweenService:Create(dot, TweenInfo.new(0.12), {
-            Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+            Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
         }):Play()
     end
     update()
-
     tog.MouseButton1Click:Connect(function()
         state = not state
         update()
         if cb then cb(state) end
     end)
-
-    return {
-        Set = function(_, v) state = v; update() end,
-        Get = function() return state end,
-    }
+    return { Set = function(_, v) state = v; update() end, Get = function() return state end }
 end
 
 local function makeSlider(parent, text, min, max, default, cb)
@@ -406,7 +400,7 @@ local function makeSlider(parent, text, min, max, default, cb)
 
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, -46, 0, 18)
-    lbl.Position = UDim2.new(0, 10, 0, 1)
+    lbl.Position = UDim2.new(0, 10, 0, 2)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = C_TXT
@@ -417,7 +411,7 @@ local function makeSlider(parent, text, min, max, default, cb)
 
     local valLbl = Instance.new("TextLabel")
     valLbl.Size = UDim2.new(0, 36, 0, 18)
-    valLbl.Position = UDim2.new(1, -44, 0, 1)
+    valLbl.Position = UDim2.new(1, -44, 0, 2)
     valLbl.BackgroundTransparency = 1
     valLbl.Text = tostring(default)
     valLbl.TextColor3 = C_ACC2
@@ -428,7 +422,7 @@ local function makeSlider(parent, text, min, max, default, cb)
 
     local barBg = Instance.new("Frame")
     barBg.Size = UDim2.new(1, -20, 0, 5)
-    barBg.Position = UDim2.new(0, 10, 0, 24)
+    barBg.Position = UDim2.new(0, 10, 0, 26)
     barBg.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     barBg.BorderSizePixel = 0
     barBg.Parent = frame
@@ -450,12 +444,9 @@ local function makeSlider(parent, text, min, max, default, cb)
 
     local cur = default
     local dragging = false
-
     barBtn.MouseButton1Down:Connect(function() dragging = true end)
     UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
     end)
     UserInputService.InputChanged:Connect(function(i)
         if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
@@ -466,13 +457,12 @@ local function makeSlider(parent, text, min, max, default, cb)
             if cb then cb(cur) end
         end
     end)
-
     return { Get = function() return cur end }
 end
 
 local function makeButton(parent, text, cb)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = C_ACC
     btn.Text = text
     btn.TextColor3 = Color3.new(1,1,1)
@@ -487,14 +477,14 @@ end
 
 local function makeDropdown(parent, text, options, default, cb)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.Size = UDim2.new(1, 0, 0, 32)
     frame.BackgroundColor3 = C_BG3
     frame.BorderSizePixel = 0
     frame.Parent = parent
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
 
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0.4, 0, 1, 0)
+    lbl.Size = UDim2.new(0.38, 0, 1, 0)
     lbl.Position = UDim2.new(0, 10, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
@@ -505,24 +495,25 @@ local function makeDropdown(parent, text, options, default, cb)
     lbl.Parent = frame
 
     local selBtn = Instance.new("TextButton")
-    selBtn.Size = UDim2.new(0.55, 0, 0, 22)
-    selBtn.Position = UDim2.new(0.43, 0, 0.5, -11)
+    selBtn.Size = UDim2.new(0.57, 0, 0, 22)
+    selBtn.Position = UDim2.new(0.41, 0, 0.5, -11)
     selBtn.BackgroundColor3 = C_BG
-    selBtn.Text = default .. "  >"
+    selBtn.Text = default
     selBtn.TextColor3 = C_ACC2
     selBtn.Font = Enum.Font.GothamMedium
     selBtn.TextSize = 11
+    selBtn.TextTruncate = Enum.TextTruncate.AtEnd
     selBtn.BorderSizePixel = 0
     selBtn.Parent = frame
     Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0, 5)
 
     local listFrame = Instance.new("ScrollingFrame")
     listFrame.Size = UDim2.new(1, -8, 0, 160)
-    listFrame.Position = UDim2.new(0, 4, 0, 34)
+    listFrame.Position = UDim2.new(0, 4, 0, 36)
     listFrame.BackgroundColor3 = C_BG
     listFrame.BorderSizePixel = 0
     listFrame.Visible = false
-    listFrame.ZIndex = 10
+    listFrame.ZIndex = 20
     listFrame.ScrollBarThickness = 3
     listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -539,11 +530,10 @@ local function makeDropdown(parent, text, options, default, cb)
         ob.Font = Enum.Font.GothamMedium
         ob.TextSize = 11
         ob.BorderSizePixel = 0
-        ob.ZIndex = 11
+        ob.ZIndex = 21
         ob.Parent = listFrame
-
         ob.MouseButton1Click:Connect(function()
-            selBtn.Text = opt .. "  >"
+            selBtn.Text = opt
             listFrame.Visible = false
             if cb then cb(opt) end
         end)
@@ -553,30 +543,63 @@ local function makeDropdown(parent, text, options, default, cb)
         listFrame.Visible = not listFrame.Visible
     end)
 
-    return { Get = function() return selBtn.Text:gsub("  >", "") end }
+    return { Get = function() return selBtn.Text end }
 end
 
--- ==================== BUILD UI ====================
--- Location
+-- ==================== BUILD UI (CORRECT ORDER) ====================
+
+-- 1. LOCATION (top priority)
 makeSection(content, "Location")
 
 local locNames = {}
 for _, loc in ipairs(locations) do
-    table.insert(locNames, loc[1] .. " (Lv " .. loc[3] .. ")")
+    table.insert(locNames, loc[1] .. "  Lv" .. loc[3])
 end
 
+local selectedLoc = locNames[1]
 makeDropdown(content, "Place", locNames, locNames[1], function(val)
-    local name = val:gsub(" %(Lv .+%)", "")
+    local name = val:gsub("  Lv.+", ""):gsub("  Lv", "")
     C.Location = name
+    selectedLoc = val
 end)
 
 makeButton(content, "Teleport to Location", function()
     teleportTo(getLocationCF(C.Location))
+    Stats.Status = "Teleported to " .. C.Location
 end)
 
-Instance.new("Frame", content).Size = UDim2.new(1, 0, 0, 1)
+makeDivider(content)
 
--- Training
+-- 2. ACTIVATION
+makeSection(content, "Observation")
+
+local lblToolInfo = makeLabel(content, "Tools: searching...")
+
+makeButton(content, "Find & Activate Observation", function()
+    Stats.Status = "Activating Obs..."
+    local tools = findAllKenTools()
+    if #tools == 0 then
+        lblToolInfo.Text = "Tools: NONE FOUND"
+        Stats.Status = "No Ken tool found in inventory!"
+        StarterGui:SetCore("SendNotification", {
+            Title = "Observation",
+            Text = "Ken tool not found. Unlock Observation Haki first!",
+            Duration = 4,
+        })
+    else
+        local names = {}
+        for _, t in ipairs(tools) do table.insert(names, t.Name) end
+        lblToolInfo.Text = "Tools: " .. table.concat(names, ", ")
+    end
+
+    local ok, msg = activateObservation()
+    Stats.ObsStatus = "Attempted"
+    Stats.Status = "Obs activation attempted. Check console (F9)"
+end)
+
+makeDivider(content)
+
+-- 3. TRAINING
 makeSection(content, "Training")
 
 local togAutoKen = makeToggle(content, "Auto Ken Training (N)", false, function(state)
@@ -585,16 +608,9 @@ local togAutoKen = makeToggle(content, "Auto Ken Training (N)", false, function(
     if not state then Stats.CurrentTarget = nil end
 end)
 
-makeButton(content, "Activate Observation", function()
-    Stats.Status = "Activating Obs..."
-    local ok, msg = activateObservation()
-    Stats.ObsStatus = ok and "Active" or "Failed"
-    Stats.Status = ok and "Observation activated!" or "Activation failed"
-end)
+makeDivider(content)
 
-Instance.new("Frame", content).Size = UDim2.new(1, 0, 0, 1)
-
--- Status
+-- 4. STATUS
 makeSection(content, "Status")
 
 local lblStatus  = makeLabel(content, "Status: Idle")
@@ -604,9 +620,9 @@ local lblCycles  = makeLabel(content, "Cycles: 0")
 local lblTime    = makeLabel(content, "Time: 0m 0s")
 local lblLoc     = makeLabel(content, "Location: Jungle")
 
-Instance.new("Frame", content).Size = UDim2.new(1, 0, 0, 1)
+makeDivider(content)
 
--- Settings
+-- 5. SETTINGS (bottom)
 makeSection(content, "Settings")
 
 makeSlider(content, "Fly Height", 40, 150, 80, function(v) C.FlyHeight = v end)
@@ -684,9 +700,6 @@ spawn(function()
         local elapsed = os.clock() - Stats.StartTime
         local mins = math.floor(elapsed / 60)
         local secs = math.floor(elapsed % 60)
-        local obsAct = isObservationActive()
-        Stats.ObsStatus = obsAct and "Active" or "Inactive"
-
         pcall(function()
             lblStatus.Text = "Status: " .. Stats.Status
             lblObs.Text = "Observation: " .. Stats.ObsStatus
@@ -713,8 +726,7 @@ spawn(function()
             end
 
             Stats.Status = "Activating Observation..."
-            local actOk, actMsg = activateObservation()
-            Stats.ObsStatus = actOk and "Active" or "Failed"
+            activateObservation()
             task.wait(0.3)
 
             Stats.Status = "Teleporting to " .. C.Location
@@ -734,9 +746,30 @@ spawn(function()
                     continue
                 end
 
-                local target = findBestTarget()
+                local target = nil
+                local enemies = workspace:FindFirstChild("Enemies")
+                local hrp = ch.HumanoidRootPart
+
+                if enemies then
+                    local bestScore = -math.huge
+                    for _, e in ipairs(enemies:GetChildren()) do
+                        local hum = e:FindFirstChild("Humanoid")
+                        local ehrp = e:FindFirstChild("HumanoidRootPart")
+                        if hum and ehrp and hum.Health > 0 then
+                            local dist = (ehrp.Position - hrp.Position).Magnitude
+                            local lv = e:FindFirstChild("Level")
+                            local lvl = lv and lv.Value or 0
+                            local score = lvl * 2 - dist * 0.3
+                            if score > bestScore then
+                                bestScore = score
+                                target = e
+                            end
+                        end
+                    end
+                end
+
                 if not target then
-                    Stats.Status = "No enemies, searching..."
+                    Stats.Status = "No enemies found, retrying..."
                     task.wait(1)
                     continue
                 end
@@ -749,19 +782,18 @@ spawn(function()
                 end)
                 task.wait(0.2)
 
-                Stats.Status = "Training with " .. target.Name .. "..."
+                Stats.Status = "Training: " .. target.Name .. " (stay near enemy)"
                 local start = os.clock()
                 while os.clock() - start < C.StayTime and C.AutoKen do
                     pcall(function()
                         ch = waitForChar()
-                        if ch and target and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
-                            local hrp = ch.HumanoidRootPart
+                        if ch and target and target.Parent and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
                             local tpos = target.HumanoidRootPart.Position
-                            local dist = (tpos - hrp.Position).Magnitude
+                            local dist = (tpos - ch.HumanoidRootPart.Position).Magnitude
                             if dist > C.SafeRange then
-                                hrp.CFrame = CFrame.new(tpos + Vector3.new(0, 5, 0))
+                                ch.HumanoidRootPart.CFrame = CFrame.new(tpos + Vector3.new(0, 5, 0))
                             end
-                            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tpos.X, hrp.Position.Y, tpos.Z))
+                            ch.HumanoidRootPart.CFrame = CFrame.new(ch.HumanoidRootPart.Position, Vector3.new(tpos.X, ch.HumanoidRootPart.Position.Y, tpos.Z))
                         end
                     end)
                     task.wait(0.1)
@@ -769,14 +801,14 @@ spawn(function()
 
                 if not C.AutoKen then break end
 
-                Stats.Status = "Recharging..."
+                Stats.Status = "Recharging (flying up)..."
                 pcall(function()
-                    if target and target:FindFirstChild("HumanoidRootPart") then
+                    if target and target.Parent and target:FindFirstChild("HumanoidRootPart") then
                         flyTo(target.HumanoidRootPart.Position, C.FlyHeight)
                     end
                 end)
 
-                Stats.Status = "Cooldown " .. C.RechargeTime .. "s"
+                Stats.Status = "Cooldown " .. C.RechargeTime .. "s..."
                 task.wait(C.RechargeTime)
 
                 Stats.CycleCount = Stats.CycleCount + 1
@@ -784,7 +816,7 @@ spawn(function()
         end)
 
         if not ok then
-            warn("[Ken Training] Error: " .. tostring(err))
+            warn("[Ken Training] " .. tostring(err))
             Stats.Status = "Error, retrying..."
             task.wait(2)
         end
@@ -793,8 +825,9 @@ end)
 
 -- ==================== INIT ====================
 StarterGui:SetCore("SendNotification", {
-    Title = "Ken Training v3.0",
-    Text = "Press N to toggle | Click K for menu",
+    Title = "Ken Training v3.1",
+    Text = "N = toggle | K = menu",
     Duration = 4,
 })
-print("[Ken Training] v3.0 loaded — N toggle | K menu")
+print("[Ken Training] v3.1 loaded")
+print("[Ken Training] Click 'Find & Activate Observation' first to check your tools")
