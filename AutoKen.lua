@@ -144,13 +144,13 @@ local function findEnemy()
     local h = getHRP()
     if not h then return nil end
 
-    local best, bestS = nil, -1e9
+    local best, bestS = nil, math.huge
     for _, v in ipairs(e:GetChildren()) do
         local hum = v:FindFirstChild("Humanoid")
         local hrp = v:FindFirstChild("HumanoidRootPart")
         if hum and hrp and hum.Health > 0 then
             local d = (hrp.Position - h.Position).Magnitude
-            if d < 500 and d > bestS then
+            if d < 500 and d < bestS then
                 bestS = d
                 best = v
             end
@@ -576,15 +576,21 @@ end)
 
 -- ==================== MAIN LOOP ====================
 spawn(function()
+    local started = false
+
     while true do
         task.wait(0.2)
-        if not C.AutoKen then task.wait(0.5) continue end
+        if not C.AutoKen then
+            started = false
+            task.wait(0.5)
+            continue
+        end
 
-        local ok, err = pcall(function()
+        if not started then
             if not alive() then
                 Stats.Status = "Waiting for character..."
                 task.wait(1)
-                return
+                continue
             end
 
             Stats.Status = "Activating Obs..."
@@ -594,18 +600,16 @@ spawn(function()
             Stats.Status = "Teleporting..."
             tp(getLocCF(C.Location))
             task.wait(2)
+            started = true
+        end
 
-            Stats.Status = "Ready. Finding enemy..."
-
+        local ok, err = pcall(function()
             while C.AutoKen do
                 if not alive() then
                     Stats.Status = "Dead, waiting..."
                     task.wait(3)
                     continue
                 end
-
-                local ch = plr.Character
-                local hrp = ch.HumanoidRootPart
 
                 local target = findEnemy()
                 if not target then
@@ -626,13 +630,15 @@ spawn(function()
                 local t0 = os.clock()
                 while os.clock() - t0 < C.StayTime and C.AutoKen do
                     pcall(function()
-                        if alive() and target and target.Parent and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
+                        local c = plr.Character
+                        local h = c and c:FindFirstChild("HumanoidRootPart")
+                        if h and target and target.Parent and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
                             local tp2 = target.HumanoidRootPart.Position
-                            local d = (tp2 - hrp.Position).Magnitude
+                            local d = (tp2 - h.Position).Magnitude
                             if d > C.SafeRange then
-                                hrp.CFrame = CFrame.new(tp2 + Vector3.new(0, 3, 0))
+                                h.CFrame = CFrame.new(tp2 + Vector3.new(0, 3, 0))
                             end
-                            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tp2.X, hrp.Position.Y, tp2.Z))
+                            h.CFrame = CFrame.new(h.Position, Vector3.new(tp2.X, h.Position.Y, tp2.Z))
                         end
                     end)
                     task.wait(0.15)
