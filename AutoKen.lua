@@ -73,13 +73,7 @@ local function alive()
     return c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") and c:FindFirstChildOfClass("Humanoid").Health > 0
 end
 
-local activeBP = nil
-
 local function clearBP()
-    if activeBP then
-        pcall(function() activeBP:Destroy() end)
-        activeBP = nil
-    end
 end
 
 local function flyTo(pos, offset)
@@ -91,21 +85,21 @@ local function flyTo(pos, offset)
     local d = (target - h.Position).Magnitude
     if d < 3 then return end
 
-    local bp = Instance.new("BodyPosition")
-    bp.Name = "KenFly"
-    bp.Position = target
-    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bp.D = 200
-    bp.P = 9000
-    bp.Parent = h
-    activeBP = bp
-
     local start = os.clock()
-    while (h.Position - target).Magnitude > 5 and os.clock() - start < 20 and C.AutoKen do
-        task.wait(0.05)
-    end
+    local timeout = math.clamp(d / 40, 5, 40)
 
-    clearBP()
+    while h and h.Parent do
+        local cur = h.Position
+        local rem = (target - cur).Magnitude
+        if rem < 3 then break end
+        if os.clock() - start > timeout then break end
+        if not C.AutoKen then break end
+
+        local step = math.clamp(rem * 0.03, 2, 12)
+        local dir = (target - cur).Unit
+        h.CFrame = CFrame.new(cur + dir * step, Vector3.new(target.X, cur.Y, target.Z))
+        task.wait(0.03)
+    end
 end
 
 local function stayNear(targetPos)
@@ -116,8 +110,8 @@ local function stayNear(targetPos)
         h.CFrame = CFrame.new(h.Position, Vector3.new(targetPos.X, h.Position.Y, targetPos.Z))
     else
         local dir = (targetPos - h.Position).Unit
-        h.CFrame = h.CFrame + dir * math.min(d - C.SafeRange, 20)
-        h.CFrame = CFrame.new(h.Position, Vector3.new(targetPos.X, h.Position.Y, targetPos.Z))
+        local step = math.min(d - C.SafeRange, 5)
+        h.CFrame = CFrame.new(h.Position + dir * step, Vector3.new(targetPos.X, h.Position.Y, targetPos.Z))
     end
 end
 
@@ -484,12 +478,8 @@ local locOpts = {}
 for _, l in ipairs(locations) do table.insert(locOpts, l[1]) end
 
 dropdown(scroll, "Place", locOpts, C.Location, function(v) C.Location = v end)
-btn(scroll, "Teleport (fast)", function()
-    local h = getHRP()
-    if h then h.CFrame = getLocCF(C.Location) + Vector3.new(0, 5, 0) end
-end)
 btn(scroll, "Fly to Location", function()
-    flyTo(getLocCF(C.Location), 5)
+    spawn(function() flyTo(getLocCF(C.Location), 5) end)
 end)
 
 divider(scroll)
