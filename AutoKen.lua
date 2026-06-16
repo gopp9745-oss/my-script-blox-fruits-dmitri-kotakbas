@@ -1,8 +1,8 @@
 --[[
-    Auto Ken Training v4.0
+    Auto Ken Training v5.0
     Blox Fruits — Auto Observation Haki V1 Training
     Executor: Xeno / Delta
-    Simple, stable, no external dependencies
+    NO external dependencies
 ]]
 
 getgenv().KenConfig = getgenv().KenConfig or {
@@ -58,10 +58,7 @@ local BG3   = Color3.fromRGB(35, 35, 55)
 local ACC   = Color3.fromRGB(80, 140, 255)
 local ACC2  = Color3.fromRGB(120, 170, 255)
 local TXT   = Color3.fromRGB(225, 230, 245)
-local DIM   = Color3.fromRGB(130, 135, 160)
-local GRN   = Color3.fromRGB(70, 210, 110)
 local RED   = Color3.fromRGB(230, 70, 70)
-local YEL   = Color3.fromRGB(255, 200, 50)
 local ON_C  = Color3.fromRGB(50, 170, 90)
 local OFF_C = Color3.fromRGB(70, 70, 90)
 
@@ -76,20 +73,52 @@ local function alive()
     return c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") and c:FindFirstChildOfClass("Humanoid").Health > 0
 end
 
-local function tp(cf)
-    local h = getHRP()
-    if h then h.CFrame = cf + Vector3.new(0, 5, 0) end
+local activeBP = nil
+
+local function clearBP()
+    if activeBP then
+        pcall(function() activeBP:Destroy() end)
+        activeBP = nil
+    end
 end
 
-local function fly(pos, off)
+local function flyTo(pos, offset)
+    clearBP()
     local h = getHRP()
     if not h then return end
-    local t = pos + Vector3.new(0, off or 0, 0)
-    local d = (t - h.Position).Magnitude
-    if d < 2 then return end
-    local tw = TweenService:Create(h, TweenInfo.new(math.clamp(d / 200, 0.1, 2.5), Enum.EasingStyle.Linear), {Position = t})
-    tw:Play()
-    tw.Completed:Wait()
+
+    local target = pos + Vector3.new(0, offset or 0, 0)
+    local d = (target - h.Position).Magnitude
+    if d < 3 then return end
+
+    local bp = Instance.new("BodyPosition")
+    bp.Name = "KenFly"
+    bp.Position = target
+    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bp.D = 200
+    bp.P = 9000
+    bp.Parent = h
+    activeBP = bp
+
+    local start = os.clock()
+    while (h.Position - target).Magnitude > 5 and os.clock() - start < 20 and C.AutoKen do
+        task.wait(0.05)
+    end
+
+    clearBP()
+end
+
+local function stayNear(targetPos)
+    local h = getHRP()
+    if not h then return end
+    local d = (targetPos - h.Position).Magnitude
+    if d <= C.SafeRange then
+        h.CFrame = CFrame.new(h.Position, Vector3.new(targetPos.X, h.Position.Y, targetPos.Z))
+    else
+        local dir = (targetPos - h.Position).Unit
+        h.CFrame = h.CFrame + dir * math.min(d - C.SafeRange, 20)
+        h.CFrame = CFrame.new(h.Position, Vector3.new(targetPos.X, h.Position.Y, targetPos.Z))
+    end
 end
 
 -- ==================== OBSERVATION ====================
@@ -100,7 +129,6 @@ local function tryActivateObs()
     if not hum then return end
 
     local tool = nil
-
     for _, cont in ipairs({plr:FindFirstChild("Backpack"), ch}) do
         if cont then
             for _, obj in ipairs(cont:GetChildren()) do
@@ -190,7 +218,6 @@ stroke.Thickness = 1
 stroke.Color = ACC
 stroke.Transparency = 0.5
 
--- Title
 local tb = Instance.new("Frame", frame)
 tb.Size = UDim2.new(1, 0, 0, 34)
 tb.BackgroundColor3 = BG2
@@ -206,7 +233,7 @@ tf.BorderSizePixel = 0
 local tl = Instance.new("TextLabel", tb)
 tl.Size = UDim2.new(1, -34, 1, 0)
 tl.BackgroundTransparency = 1
-tl.Text = "Ken Training v4.0"
+tl.Text = "Ken Training v5.0"
 tl.TextColor3 = ACC2
 tl.Font = Enum.Font.GothamBold
 tl.TextSize = 14
@@ -224,7 +251,6 @@ xbtn.TextSize = 11
 xbtn.BorderSizePixel = 0
 Instance.new("UICorner", xbtn).CornerRadius = UDim.new(0, 5)
 
--- Content
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1, -12, 1, -40)
 scroll.Position = UDim2.new(0, 6, 0, 38)
@@ -452,18 +478,22 @@ local function dropdown(parent, text, opts, def, cb)
 end
 
 -- ==================== BUILD UI ====================
--- 1. LOCATION
 section(scroll, "Location")
 
 local locOpts = {}
 for _, l in ipairs(locations) do table.insert(locOpts, l[1]) end
 
 dropdown(scroll, "Place", locOpts, C.Location, function(v) C.Location = v end)
-btn(scroll, "Teleport", function() tp(getLocCF(C.Location)) end)
+btn(scroll, "Teleport (fast)", function()
+    local h = getHRP()
+    if h then h.CFrame = getLocCF(C.Location) + Vector3.new(0, 5, 0) end
+end)
+btn(scroll, "Fly to Location", function()
+    flyTo(getLocCF(C.Location), 5)
+end)
 
 divider(scroll)
 
--- 2. OBSERVATION
 section(scroll, "Observation")
 btn(scroll, "Activate Observation", function()
     Stats.Obs = "Activating..."
@@ -474,18 +504,19 @@ end)
 
 divider(scroll)
 
--- 3. TRAINING
 section(scroll, "Training")
 
 local togAuto = toggle(scroll, "Auto Ken Training (N)", false, function(s)
     C.AutoKen = s
     Stats.Status = s and "Starting..." or "Stopped"
-    if not s then Stats.Target = nil end
+    if not s then
+        Stats.Target = nil
+        clearBP()
+    end
 end)
 
 divider(scroll)
 
--- 4. STATUS
 section(scroll, "Status")
 local lStatus = label(scroll, "Status: Idle")
 local lObs    = label(scroll, "Obs: Unknown")
@@ -496,7 +527,6 @@ local lLoc    = label(scroll, "Location: Prison")
 
 divider(scroll)
 
--- 5. SETTINGS
 section(scroll, "Settings")
 slider(scroll, "Stay near enemy", 2, 8, 4, function(v) C.StayTime = v end)
 slider(scroll, "Recharge wait", 8, 20, 14, function(v) C.RechargeTime = v end)
@@ -554,7 +584,10 @@ UserInputService.InputBegan:Connect(function(inp, gpe)
     if inp.KeyCode == Enum.KeyCode.N then
         C.AutoKen = not C.AutoKen
         Stats.Status = C.AutoKen and "Starting..." or "Stopped"
-        if not C.AutoKen then Stats.Target = nil end
+        if not C.AutoKen then
+            Stats.Target = nil
+            clearBP()
+        end
         pcall(function() togAuto:Set(C.AutoKen) end)
     end
 end)
@@ -576,17 +609,17 @@ end)
 
 -- ==================== MAIN LOOP ====================
 spawn(function()
-    local started = false
+    local flew = false
 
     while true do
         task.wait(0.2)
         if not C.AutoKen then
-            started = false
+            flew = false
             task.wait(0.5)
             continue
         end
 
-        if not started then
+        if not flew then
             if not alive() then
                 Stats.Status = "Waiting for character..."
                 task.wait(1)
@@ -597,23 +630,24 @@ spawn(function()
             tryActivateObs()
             task.wait(0.5)
 
-            Stats.Status = "Teleporting..."
-            tp(getLocCF(C.Location))
-            task.wait(2)
-            started = true
+            Stats.Status = "Flying to " .. C.Location .. "..."
+            flyTo(getLocCF(C.Location), 5)
+            flew = true
+            task.wait(0.5)
         end
 
         local ok, err = pcall(function()
             while C.AutoKen do
                 if not alive() then
                     Stats.Status = "Dead, waiting..."
+                    clearBP()
                     task.wait(3)
                     continue
                 end
 
                 local target = findEnemy()
                 if not target then
-                    Stats.Status = "No enemies, waiting..."
+                    Stats.Status = "No enemies, searching..."
                     task.wait(1)
                     continue
                 end
@@ -622,23 +656,20 @@ spawn(function()
                 Stats.Status = "Approaching " .. target.Name
 
                 pcall(function()
-                    fly(target.HumanoidRootPart.Position, 2)
+                    if target and target.Parent and target:FindFirstChild("HumanoidRootPart") then
+                        flyTo(target.HumanoidRootPart.Position, 2)
+                    end
                 end)
                 task.wait(0.3)
 
-                Stats.Status = "Dodging attacks (" .. C.StayTime .. "s)"
+                Stats.Status = "Dodging (" .. C.StayTime .. "s)"
                 local t0 = os.clock()
                 while os.clock() - t0 < C.StayTime and C.AutoKen do
                     pcall(function()
                         local c = plr.Character
                         local h = c and c:FindFirstChild("HumanoidRootPart")
                         if h and target and target.Parent and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
-                            local tp2 = target.HumanoidRootPart.Position
-                            local d = (tp2 - h.Position).Magnitude
-                            if d > C.SafeRange then
-                                h.CFrame = CFrame.new(tp2 + Vector3.new(0, 3, 0))
-                            end
-                            h.CFrame = CFrame.new(h.Position, Vector3.new(tp2.X, h.Position.Y, tp2.Z))
+                            stayNear(target.HumanoidRootPart.Position)
                         end
                     end)
                     task.wait(0.15)
@@ -649,7 +680,7 @@ spawn(function()
                 Stats.Status = "Flying up to recharge..."
                 pcall(function()
                     if target and target.Parent and target:FindFirstChild("HumanoidRootPart") then
-                        fly(target.HumanoidRootPart.Position, 60)
+                        flyTo(target.HumanoidRootPart.Position, 60)
                     end
                 end)
 
@@ -665,6 +696,7 @@ spawn(function()
         if not ok then
             warn("[Ken] " .. tostring(err))
             Stats.Status = "Error"
+            clearBP()
             task.wait(2)
         end
     end
@@ -672,8 +704,8 @@ end)
 
 -- ==================== INIT ====================
 StarterGui:SetCore("SendNotification", {
-    Title = "Ken Training v4.0",
+    Title = "Ken Training v5.0",
     Text = "N = toggle | K = menu",
     Duration = 4,
 })
-print("[Ken] v4.0 loaded")
+print("[Ken] v5.0 loaded — BodyPosition movement (no anti-cheat)")
