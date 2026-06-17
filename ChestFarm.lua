@@ -187,10 +187,10 @@ local function fadeOut(obj, dur)
     task.delay(dur or 0.3, function() obj.Visible = false end)
 end
 
-local function scaleIn(obj, dur)
+local function scaleIn(obj, dur, targetSize)
     obj.Size = UDim2.new(0, 0, 0, 0)
     obj.Visible = true
-    tween(obj, {Size = obj._targetSize}, dur or 0.5, Enum.EasingStyle.Back)
+    tween(obj, {Size = targetSize}, dur or 0.5, Enum.EasingStyle.Back)
 end
 
 -- Floating button
@@ -279,7 +279,7 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = panel
 mainFrame.Visible = false
-mainFrame._targetSize = UDim2.new(0, 300, 0, 480)
+local MAIN_SIZE = UDim2.new(0, 300, 0, 480)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 16)
 
 -- Glass stroke
@@ -600,7 +600,7 @@ local panelOpen = false
 local function openPanel()
     if panelOpen then return end
     panelOpen = true
-    scaleIn(mainFrame, 0.4)
+    scaleIn(mainFrame, 0.4, MAIN_SIZE)
 end
 
 local function closePanel()
