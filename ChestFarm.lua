@@ -1,19 +1,27 @@
 --===================================================================================--
 --                    AUTO CHEST FARM + CHALICE DETECTOR                              --
 --                    Blox Fruits — Dmitri Kotakbass                                   --
---                    EXECUTOR: XENON / DELTA / MULTI-API                              --
+--                    EXECUTOR: XENON / DELTA / SOLARA v3                              --
 --===================================================================================--
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
+local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local plr = Players.LocalPlayer
-local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+
+--===================================================================================--
+--                              SAFE PARENT (Solara v3 fix)                            --
+--===================================================================================--
+
+local guiParent = plr:WaitForChild("PlayerGui")
+local ok, cgui = pcall(function() return game:GetService("CoreGui") end)
+if ok and cgui then
+    guiParent = cgui
+end
 
 --===================================================================================--
 --                              CONFIG                                                --
@@ -26,7 +34,7 @@ local Config = {
     CollectDelay = 1.5,
     MoveSpeed = 300,
     ChaliceCheckInterval = 3,
-    ChaliceSpawnInterval = 14400, -- 4 hours in seconds
+    ChaliceSpawnInterval = 14400,
 }
 
 --===================================================================================--
@@ -38,10 +46,9 @@ local Stats = {
     MoneyEarned = 0,
     StartTime = os.clock(),
     ChaliceFound = false,
-    ChaliceTimerLeft = 0,
-    ChaliceLastSpawn = 0,
+    ChaliceTimerLeft = 14400,
+    ChaliceLastSpawn = os.clock(),
     Status = "Idle",
-    LastChestType = "None",
 }
 
 --===================================================================================--
@@ -49,20 +56,13 @@ local Stats = {
 --===================================================================================--
 
 local ChestPriority = {
-    ["DiamondChest"] = {priority = 1, money = 10000, name = "Diamond"},
-    ["GoldChest"] = {priority = 2, money = 4500, name = "Gold"},
-    ["SilverChest"] = {priority = 3, money = 1300, name = "Silver"},
-    ["Chest"] = {priority = 3, money = 1300, name = "Silver"},
+    {pattern = "Diamond", priority = 1, money = 10000, name = "Diamond"},
+    {pattern = "Gold", priority = 2, money = 4500, name = "Gold"},
+    {pattern = "Silver", priority = 3, money = 1300, name = "Silver"},
+    {pattern = "Chest", priority = 3, money = 1300, name = "Silver"},
 }
 
-local ExcludedChests = {
-    "MirageChest",
-    "FragmentChest",
-    "CursedChest",
-    "Mirage Chest",
-    "Fragment Chest",
-    "Cursed Chest",
-}
+local ExcludedChests = {"Mirage", "Fragment", "Cursed"}
 
 --===================================================================================--
 --                              CORE HELPERS                                          --
@@ -78,15 +78,28 @@ local function alive()
     return c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") and c:FindFirstChildOfClass("Humanoid").Health > 0
 end
 
-local function playSound(id, vol)
+local function playNotifSound()
     task.spawn(function()
         pcall(function()
             local s = Instance.new("Sound")
-            s.SoundId = id
-            s.Volume = vol or 0.5
+            s.SoundId = "rbxassetid://5851841788"
+            s.Volume = 0.4
             s.Parent = SoundService
             s:Play()
-            game:GetService("Debris"):AddItem(s, 3)
+            Debris:AddItem(s, 3)
+        end)
+    end)
+end
+
+local function playChaliceSound()
+    task.spawn(function()
+        pcall(function()
+            local s = Instance.new("Sound")
+            s.SoundId = "rbxassetid://5851841788"
+            s.Volume = 0.7
+            s.Parent = SoundService
+            s:Play()
+            Debris:AddItem(s, 4)
         end)
     end)
 end
@@ -115,8 +128,8 @@ local function isExcluded(chestName)
 end
 
 local function getChestType(chestName)
-    for pattern, data in pairs(ChestPriority) do
-        if chestName:find(pattern) then
+    for _, data in ipairs(ChestPriority) do
+        if chestName:find(data.pattern) then
             return data
         end
     end
@@ -128,22 +141,35 @@ local function findChests()
     local hrp = getHRP()
     if not hrp then return chests end
 
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Part") and obj.Name:find("Chest") then
-            if not isExcluded(obj.Name) then
-                local chestData = getChestType(obj.Name)
-                local distance = (obj.Position - hrp.Position).Magnitude
-                if distance <= Config.ChestRange then
-                    table.insert(chests, {
-                        part = obj,
-                        name = chestData.name,
-                        priority = chestData.priority,
-                        money = chestData.money,
-                        distance = distance,
-                    })
-                end
+    local chars = {workspace}
+    pcall(function()
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Folder") or v:IsA("Model") then
+                table.insert(chars, v)
             end
         end
+    end)
+
+    for _, container in ipairs(chars) do
+        pcall(function()
+            for _, obj in pairs(container:GetDescendants()) do
+                if obj:IsA("Part") and obj.Name:find("Chest") then
+                    if not isExcluded(obj.Name) then
+                        local chestData = getChestType(obj.Name)
+                        local distance = (obj.Position - hrp.Position).Magnitude
+                        if distance <= Config.ChestRange then
+                            table.insert(chests, {
+                                part = obj,
+                                name = chestData.name,
+                                priority = chestData.priority,
+                                money = chestData.money,
+                                distance = distance,
+                            })
+                        end
+                    end
+                end
+            end
+        end)
     end
 
     table.sort(chests, function(a, b)
@@ -169,10 +195,10 @@ local function tweenTo(targetPos, offset)
     if dist < 2 then return true end
 
     local duration = math.clamp(dist / Config.MoveSpeed, 0.2, 3)
-    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Position = pos})
+    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
     tween:Play()
     tween.Completed:Wait()
-    task.wait(0.2)
+    task.wait(0.3)
     return true
 end
 
@@ -185,7 +211,7 @@ local function collectChest(chest)
         return false
     end
 
-    Stats.Status = "Moving to " .. chest.name .. " Chest (" .. math.floor(chest.distance) .. "m)"
+    Stats.Status = "Moving to " .. chest.name .. " (" .. math.floor(chest.distance) .. "m)"
 
     local success = tweenTo(chest.part.Position, 2)
     if not success then
@@ -196,11 +222,9 @@ local function collectChest(chest)
 
     Stats.ChestsCollected = Stats.ChestsCollected + 1
     Stats.MoneyEarned = Stats.MoneyEarned + chest.money
-    Stats.LastChestType = chest.name
     Stats.Status = "Collected " .. chest.name .. " (+$" .. chest.money .. ")"
 
-    playSound("rbxassetid://6042053332", 0.3)
-
+    playNotifSound()
     return true
 end
 
@@ -210,7 +234,6 @@ end
 
 local function checkChaliceInInventory()
     local found = false
-
     pcall(function()
         if plr.Backpack:FindFirstChild("God's Chalice") then
             found = true
@@ -219,14 +242,12 @@ local function checkChaliceInInventory()
             found = true
         end
     end)
-
     return found
 end
 
 local function updateChaliceTimer()
     local elapsed = os.clock() - Stats.ChaliceLastSpawn
     local remaining = Config.ChaliceSpawnInterval - elapsed
-
     if remaining <= 0 then
         Stats.ChaliceTimerLeft = 0
         return true
@@ -240,33 +261,12 @@ local function checkChalice()
     if checkChaliceInInventory() then
         if not Stats.ChaliceFound then
             Stats.ChaliceFound = true
-            playSound("rbxassetid://6042053886", 0.8)
+            playChaliceSound()
             notify("GOD'S CHALICE FOUND!", "Check your inventory!", 6)
         end
         return true
     end
     return false
-end
-
---===================================================================================--
---                              CHALICE SCAANNER IN CHESTS                            --
---===================================================================================--
-
-local function scanForChaliceChest()
-    local hrp = getHRP()
-    if not hrp then return nil end
-
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Part") and obj.Name:find("Chest") then
-            if not isExcluded(obj.Name) then
-                local dist = (obj.Position - hrp.Position).Magnitude
-                if dist <= Config.ChestRange then
-                    return obj
-                end
-            end
-        end
-    end
-    return nil
 end
 
 --===================================================================================--
@@ -277,13 +277,12 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFarmUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = CoreGui
+gui.Parent = guiParent
 
 local BG = Color3.fromRGB(20, 20, 32)
 local BG2 = Color3.fromRGB(28, 28, 46)
 local BG3 = Color3.fromRGB(35, 35, 55)
 local ACC = Color3.fromRGB(80, 140, 255)
-local ACC2 = Color3.fromRGB(120, 170, 255)
 local TXT = Color3.fromRGB(225, 230, 245)
 local GREEN = Color3.fromRGB(50, 170, 90)
 local RED = Color3.fromRGB(230, 70, 70)
@@ -291,10 +290,9 @@ local GOLD = Color3.fromRGB(255, 215, 0)
 local ON_C = Color3.fromRGB(50, 170, 90)
 local OFF_C = Color3.fromRGB(70, 70, 90)
 
--- Main Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 420)
-frame.Position = UDim2.new(0.5, -130, 0.5, -210)
+frame.Size = UDim2.new(0, 260, 0, 400)
+frame.Position = UDim2.new(0.5, -130, 0.5, -200)
 frame.BackgroundColor3 = BG
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -307,9 +305,8 @@ stroke.Thickness = 1
 stroke.Color = GOLD
 stroke.Transparency = 0.5
 
--- Title Bar
 local tb = Instance.new("Frame", frame)
-tb.Size = UDim2.new(1, 0, 0, 32)
+tb.Size = UDim2.new(1, 0, 0, 30)
 tb.BackgroundColor3 = BG2
 tb.BorderSizePixel = 0
 Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 10)
@@ -332,7 +329,7 @@ tl.Position = UDim2.new(0, 10, 0, 0)
 
 local xbtn = Instance.new("TextButton", tb)
 xbtn.Size = UDim2.new(0, 22, 0, 22)
-xbtn.Position = UDim2.new(1, -26, 0, 5)
+xbtn.Position = UDim2.new(1, -26, 0, 4)
 xbtn.BackgroundColor3 = RED
 xbtn.Text = "X"
 xbtn.TextColor3 = Color3.new(1,1,1)
@@ -341,11 +338,10 @@ xbtn.TextSize = 10
 xbtn.BorderSizePixel = 0
 Instance.new("UICorner", xbtn).CornerRadius = UDim.new(0, 5)
 
--- Toggle Button (Circle)
 local circGui = Instance.new("ScreenGui")
 circGui.Name = "ChestFarmCircle"
 circGui.ResetOnSpawn = false
-circGui.Parent = CoreGui
+circGui.Parent = guiParent
 
 local circ = Instance.new("TextButton", circGui)
 circ.Size = UDim2.new(0, 45, 0, 45)
@@ -366,10 +362,9 @@ cs.Thickness = 1.5
 cs.Color = GOLD
 cs.Transparency = 0.4
 
--- Scroll Frame
 local scroll = Instance.new("ScrollingFrame", frame)
-scroll.Size = UDim2.new(1, -12, 1, -38)
-scroll.Position = UDim2.new(0, 6, 0, 35)
+scroll.Size = UDim2.new(1, -12, 1, -36)
+scroll.Position = UDim2.new(0, 6, 0, 33)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 3
@@ -379,7 +374,6 @@ scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0, 4)
 Instance.new("UIPadding", scroll).PaddingBottom = UDim.new(0, 6)
 
--- UI Helpers
 local function section(parent, text)
     local l = Instance.new("TextLabel", parent)
     l.Size = UDim2.new(1, 0, 0, 20)
@@ -473,13 +467,9 @@ section(scroll, "Chest Farm")
 local togChest = toggle(scroll, "Auto Chest Farm", false, function(s)
     Config.AutoChest = s
     Stats.Status = s and "Starting..." or "Stopped"
-    if not s then
-        Stats.Status = "Stopped"
-    end
 end)
 
 divider(scroll)
-
 section(scroll, "Chalice")
 
 local togChalice = toggle(scroll, "Auto Chalice Search", false, function(s)
@@ -490,18 +480,16 @@ local togChalice = toggle(scroll, "Auto Chalice Search", false, function(s)
 end)
 
 divider(scroll)
-
 section(scroll, "Statistics")
 
 local lStatus = label(scroll, "Status: Idle")
 local lChests = label(scroll, "Chests: 0")
 local lMoney = label(scroll, "Money: $0")
 local lChalice = label(scroll, "Chalice: Not found")
-local lTimer = label(scroll, "Chalice Timer: 4:00:00")
+local lTimer = label(scroll, "Timer: 4:00:00")
 local lTime = label(scroll, "Time: 0m 0s")
 
 divider(scroll)
-
 section(scroll, "Actions")
 
 btn(scroll, "Find Nearest Chest", function()
@@ -516,9 +504,7 @@ end)
 btn(scroll, "Teleport to Chest", function()
     local chests = findChests()
     if #chests > 0 then
-        spawn(function()
-            collectChest(chests[1])
-        end)
+        spawn(function() collectChest(chests[1]) end)
     else
         Stats.Status = "No chests found"
     end
@@ -531,7 +517,7 @@ btn(scroll, "Reset Chalice Timer", function()
 end)
 
 --===================================================================================--
---                              ANIMATION                                             --
+--                              ANIMATION + KEYBIND                                   --
 --===================================================================================--
 
 xbtn.MouseButton1Click:Connect(function() frame.Visible = false end)
@@ -544,7 +530,7 @@ spawn(function()
             cs.Transparency = 0.05 + a * 0.3
             cs.Thickness = 1.5 + a
             circ.TextTransparency = 0.05
-            circ.Text = string.char(9679)
+            circ.Text = "*"
         else
             cs.Transparency = 0.4
             cs.Thickness = 1.5
@@ -555,11 +541,7 @@ spawn(function()
     end
 end)
 
---===================================================================================--
---                              KEYBIND                                               --
---===================================================================================--
-
-game:GetService("UserInputService").InputBegan:Connect(function(inp, gpe)
+UserInputService.InputBegan:Connect(function(inp, gpe)
     if gpe then return end
     if inp.KeyCode == Enum.KeyCode.C then
         Config.AutoChest = not Config.AutoChest
@@ -581,17 +563,17 @@ spawn(function()
         pcall(function()
             lStatus.Text = "Status: " .. Stats.Status
             lChests.Text = "Chests: " .. Stats.ChestsCollected
-            lMoney.Text = "Money: $" .. tostring(Stats.MoneyEarned):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+            lMoney.Text = "Money: $" .. tostring(Stats.MoneyEarned)
             lChalice.Text = "Chalice: " .. (Stats.ChaliceFound and "FOUND!" or "Not found")
             lChalice.TextColor3 = Stats.ChaliceFound and GOLD or TXT
 
-            local timerMins = math.floor(Stats.ChaliceTimerLeft / 3600)
-            local timerSecs = math.floor((Stats.ChaliceTimerLeft % 3600) / 60)
-            local timerHrs = math.floor(Stats.ChaliceTimerLeft / 3600)
-            lTimer.Text = string.format("Chalice Timer: %d:%02d:%02d", timerHrs, timerSecs, timerMins % 60)
+            local h = math.floor(Stats.ChaliceTimerLeft / 3600)
+            local m = math.floor((Stats.ChaliceTimerLeft % 3600) / 60)
+            local s = math.floor(Stats.ChaliceTimerLeft % 60)
+            lTimer.Text = string.format("Timer: %d:%02d:%02d", h, m, s)
 
             if Stats.ChaliceTimerLeft <= 0 and Config.AutoChaliceSearch then
-                lTimer.Text = "Chalice Timer: AVAILABLE NOW!"
+                lTimer.Text = "Timer: AVAILABLE NOW!"
                 lTimer.TextColor3 = GREEN
             else
                 lTimer.TextColor3 = TXT
@@ -609,12 +591,10 @@ end)
 spawn(function()
     while true do
         task.wait(0.3)
-
         if not Config.AutoChest then
             task.wait(0.5)
             continue
         end
-
         if not alive() then
             Stats.Status = "Waiting for character..."
             task.wait(1)
@@ -639,7 +619,6 @@ spawn(function()
                 for _, chest in ipairs(chests) do
                     if not Config.AutoChest then break end
                     if not alive() then break end
-
                     if chest.part and chest.part.Parent then
                         collectChest(chest)
                         task.wait(0.3)
@@ -664,18 +643,10 @@ end)
 
 spawn(function()
     Stats.ChaliceLastSpawn = os.clock()
-
     while true do
         task.wait(Config.ChaliceCheckInterval)
-
-        if not Config.AutoChaliceSearch then
-            continue
-        end
-
-        if not alive() then
-            continue
-        end
-
+        if not Config.AutoChaliceSearch then continue end
+        if not alive() then continue end
         pcall(function()
             updateChaliceTimer()
             checkChalice()
@@ -687,10 +658,12 @@ end)
 --                              INIT                                                  --
 --===================================================================================--
 
-StarterGui:SetCore("SendNotification", {
-    Title = "Chest Farm + Chalice",
-    Text = "C = toggle | Click circle for menu",
-    Duration = 4,
-})
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Chest Farm + Chalice",
+        Text = "C = toggle | Click circle for menu",
+        Duration = 4,
+    })
+end)
 
-print("[ChestFarm] Loaded — Auto Chest + Chalice Detection")
+print("[ChestFarm] Loaded")

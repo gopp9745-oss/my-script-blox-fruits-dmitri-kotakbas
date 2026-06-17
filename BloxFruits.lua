@@ -1,22 +1,40 @@
-local ok, Library = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-end)
-if not ok then
-    game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Error", Text = "Failed to load UI library", Duration = 5})
+local Library
+local kavoUrls = {
+    "https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua",
+    "https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/master/source.lua",
+}
+for _, url in ipairs(kavoUrls) do
+    local s, lib = pcall(function()
+        return loadstring(game:HttpGet(url, true))()
+    end)
+    if s and lib then
+        Library = lib
+        break
+    end
+    task.wait(0.3)
+end
+
+if not Library then
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Error", Text = "Failed to load UI library", Duration = 5})
+    end)
     return
 end
 
 local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
 
 local plr = game.Players.LocalPlayer
-local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
+local CommF
+pcall(function() CommF = game:GetService("ReplicatedStorage").Remotes.CommF_ end)
 local RunS = game:GetService("RunService")
 local TweenS = game:GetService("TweenService")
 local TeleS = game:GetService("TeleportService")
 local HttpS = game:GetService("HttpService")
 local VUser = game:GetService("VirtualUser")
-local RigEvent = game:GetService("ReplicatedStorage").RigControllerEvent
-local Validator = game:GetService("ReplicatedStorage").Remotes.Validator
+local RigEvent
+pcall(function() RigEvent = game:GetService("ReplicatedStorage").RigControllerEvent end)
+local Validator
+pcall(function() Validator = game:GetService("ReplicatedStorage").Remotes.Validator end)
 
 --- CombatFramework init (with safe fallback)
 local CbFw2, cfOK
@@ -385,6 +403,7 @@ end)
 --- ====================
 --- CHEST FARM TAB
 --- ====================
+pcall(function()
 local T5 = Window:NewTab("Chest Farm")
 local S5 = T5:NewSection("Auto Chest")
 
@@ -409,22 +428,26 @@ spawn(function()
         task.wait(1)
         local elapsed = os.clock() - lastSpawn
         local remaining = 14400 - elapsed
+        local timerText
         if remaining <= 0 then
-            timerLabel:UpdateText("Chalice Timer: AVAILABLE NOW!")
+            timerText = "Chalice Timer: AVAILABLE NOW!"
         else
             local h = math.floor(remaining / 3600)
             local m = math.floor((remaining % 3600) / 60)
             local s = math.floor(remaining % 60)
-            timerLabel:UpdateText(string.format("Chalice Timer: %d:%02d:%02d", h, m, s))
+            timerText = string.format("Chalice Timer: %d:%02d:%02d", h, m, s)
         end
+        pcall(function() timerLabel:UpdateText(timerText) end)
+        pcall(function() timerLabel.Text = timerText end)
 
+        local chaliceText = "Chalice: Not found"
         pcall(function()
             if plr.Backpack:FindFirstChild("God's Chalice") or (plr.Character and plr.Character:FindFirstChild("God's Chalice")) then
-                chaliceLabel:UpdateText("Chalice: FOUND!")
-            else
-                chaliceLabel:UpdateText("Chalice: Not found")
+                chaliceText = "Chalice: FOUND!"
             end
         end)
+        pcall(function() chaliceLabel:UpdateText(chaliceText) end)
+        pcall(function() chaliceLabel.Text = chaliceText end)
     end
 end)
 
@@ -472,6 +495,7 @@ S5:NewButton("Collect All Chests", nil, function()
             task.wait(1)
         end
     end)
+end)
 end)
 
 end)
