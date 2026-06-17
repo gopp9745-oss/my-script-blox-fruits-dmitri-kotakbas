@@ -1,42 +1,35 @@
-local Library
-local kavoUrls = {
-    "https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua",
-    "https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/master/source.lua",
-}
-for _, url in ipairs(kavoUrls) do
-    local s, lib = pcall(function()
-        return loadstring(game:HttpGet(url, true))()
-    end)
-    if s and lib then
-        Library = lib
-        break
-    end
-    task.wait(0.3)
-end
+--===================================================================================--
+--                    BLOX FRUITS — Dmitri Kotakbass                                   --
+--                    NATIVE GUI (no external dependencies)                            --
+--===================================================================================--
 
-if not Library then
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Error", Text = "Failed to load UI library", Duration = 5})
-    end)
-    return
-end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
 
-local Window = Library.CreateLib("Blox Fruits - Dmitri Kotakbass", "DarkTheme")
+local plr = Players.LocalPlayer
 
-local plr = game.Players.LocalPlayer
+local guiParent = plr:WaitForChild("PlayerGui")
+pcall(function()
+    local cg = game:GetService("CoreGui")
+    if cg then guiParent = cg end
+end)
+
 local CommF
-pcall(function() CommF = game:GetService("ReplicatedStorage").Remotes.CommF_ end)
-local RunS = game:GetService("RunService")
-local TweenS = game:GetService("TweenService")
-local TeleS = game:GetService("TeleportService")
-local HttpS = game:GetService("HttpService")
-local VUser = game:GetService("VirtualUser")
+pcall(function() CommF = ReplicatedStorage.Remotes.CommF_ end)
 local RigEvent
-pcall(function() RigEvent = game:GetService("ReplicatedStorage").RigControllerEvent end)
+pcall(function() RigEvent = ReplicatedStorage.RigControllerEvent end)
 local Validator
-pcall(function() Validator = game:GetService("ReplicatedStorage").Remotes.Validator end)
+pcall(function() Validator = ReplicatedStorage.Remotes.Validator end)
 
---- CombatFramework init (with safe fallback)
+--- CombatFramework init
 local CbFw2, cfOK
 pcall(function()
     CbFw2 = debug.getupvalues(require(plr.PlayerScripts.CombatFramework))[2]
@@ -81,12 +74,12 @@ local function fastAtk()
             local blade = CbFw2.activeController.blades and CbFw2.activeController.blades[1]
             if blade then
                 while blade.Parent ~= plr.Character do blade = blade.Parent end
-                RigEvent:FireServer("weaponChange", tostring(blade))
+                if RigEvent then RigEvent:FireServer("weaponChange", tostring(blade)) end
             end
         end)
         pcall(function()
-            Validator:FireServer(math.floor(r1 / 1099511627776 * 16777215), u7)
-            RigEvent:FireServer("hit", filtered, 1, "")
+            if Validator then Validator:FireServer(math.floor(r1 / 1099511627776 * 16777215), u7) end
+            if RigEvent then RigEvent:FireServer("hit", filtered, 1, "") end
         end)
     end
     pcall(function()
@@ -99,8 +92,8 @@ end
 
 local function click()
     pcall(function()
-        VUser:CaptureController()
-        VUser:Button1Down(Vector2.new(0, 1))
+        VirtualUser:CaptureController()
+        VirtualUser:Button1Down(Vector2.new(0, 1))
     end)
 end
 
@@ -118,7 +111,7 @@ local function fly(pos)
     local hrp = char.HumanoidRootPart
     local d = (pos - hrp.Position).Magnitude
     if d < 1 then return end
-    local tw = TweenS:Create(hrp, TweenInfo.new(math.clamp(d / 300, 0.2, 2.5), Enum.EasingStyle.Linear), {Position = pos})
+    local tw = TweenService:Create(hrp, TweenInfo.new(math.clamp(d / 300, 0.2, 2.5), Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
     tw:Play()
     tw.Completed:Wait()
 end
@@ -186,7 +179,7 @@ local function acceptQuest()
             local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
             if d < 25 then
                 local p = q:FindFirstChildWhichIsA("ProximityPrompt")
-                if p then fireproximityprompt(p); task.wait(0.2) end
+                if p then pcall(function() fireproximityprompt(p) end); task.wait(0.2) end
             end
         end
     end
@@ -194,7 +187,7 @@ end
 
 --- Bring enemy
 _G.Bring = false
-RunS.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function()
     if _G.Bring and _G.Target then
         pcall(function()
             local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
@@ -205,17 +198,309 @@ RunS.Heartbeat:Connect(function()
     end
 end)
 
---- ====================
---- MAIN TAB
---- ====================
-pcall(function()
-local T1 = Window:NewTab("Main")
-local S1 = T1:NewSection("Auto Farm")
+--===================================================================================--
+--                              NATIVE UI FRAMEWORK                                   --
+--===================================================================================--
 
-S1:NewToggle("Auto Farm", nil, function(state)
+local BG = Color3.fromRGB(20, 20, 32)
+local BG2 = Color3.fromRGB(28, 28, 46)
+local BG3 = Color3.fromRGB(35, 35, 55)
+local ACC = Color3.fromRGB(80, 140, 255)
+local TXT = Color3.fromRGB(225, 230, 245)
+local GREEN = Color3.fromRGB(50, 170, 90)
+local RED = Color3.fromRGB(230, 70, 70)
+local GOLD = Color3.fromRGB(255, 215, 0)
+local ON_C = Color3.fromRGB(50, 170, 90)
+local OFF_C = Color3.fromRGB(70, 70, 90)
+
+local mainGui = Instance.new("ScreenGui")
+mainGui.Name = "BloxFruitsUI"
+mainGui.ResetOnSpawn = false
+mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+mainGui.Parent = guiParent
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 280, 0, 460)
+mainFrame.Position = UDim2.new(0.5, -140, 0.5, -230)
+mainFrame.BackgroundColor3 = BG
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = mainGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+local mStroke = Instance.new("UIStroke", mainFrame)
+mStroke.Thickness = 1
+mStroke.Color = ACC
+mStroke.Transparency = 0.5
+
+local titleBar = Instance.new("Frame", mainFrame)
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = BG2
+titleBar.BorderSizePixel = 0
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 10)
+
+local titleFill = Instance.new("Frame", titleBar)
+titleFill.Size = UDim2.new(1, 0, 0, 10)
+titleFill.Position = UDim2.new(0, 0, 1, -10)
+titleFill.BackgroundColor3 = BG2
+titleFill.BorderSizePixel = 0
+
+local titleText = Instance.new("TextLabel", titleBar)
+titleText.Size = UDim2.new(1, -60, 1, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Blox Fruits - Dmitri Kotakbass"
+titleText.TextColor3 = ACC
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 12
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Position = UDim2.new(0, 10, 0, 0)
+
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.Size = UDim2.new(0, 22, 0, 22)
+closeBtn.Position = UDim2.new(1, -26, 0, 4)
+closeBtn.BackgroundColor3 = RED
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 10
+closeBtn.BorderSizePixel = 0
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 5)
+
+local tabBar = Instance.new("Frame", mainFrame)
+tabBar.Size = UDim2.new(1, -10, 0, 28)
+tabBar.Position = UDim2.new(0, 5, 0, 33)
+tabBar.BackgroundColor3 = BG2
+tabBar.BorderSizePixel = 0
+Instance.new("UICorner", tabBar).CornerRadius = UDim.new(0, 6)
+
+local contentFrame = Instance.new("Frame", mainFrame)
+contentFrame.Size = UDim2.new(1, -10, 1, -70)
+contentFrame.Position = UDim2.new(0, 5, 0, 66)
+contentFrame.BackgroundTransparency = 1
+contentFrame.BorderSizePixel = 0
+
+local tabs = {}
+local tabButtons = {}
+local currentTab = nil
+
+local function createTab(name, index)
+    local page = Instance.new("ScrollingFrame", contentFrame)
+    page.Name = name
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = ACC
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Visible = false
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 3)
+    Instance.new("UIPadding", page).PaddingBottom = UDim.new(0, 6)
+    tabs[name] = page
+
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size = UDim2.new(0, 60, 1, -4)
+    btn.Position = UDim2.new(0, (index - 1) * 63 + 2, 0, 2)
+    btn.BackgroundColor3 = BG3
+    btn.Text = name
+    btn.TextColor3 = TXT
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 9
+    btn.BorderSizePixel = 0
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    tabButtons[name] = btn
+
+    btn.MouseButton1Click:Connect(function()
+        if currentTab then
+            tabs[currentTab].Visible = false
+            tabButtons[currentTab].BackgroundColor3 = BG3
+        end
+        currentTab = name
+        page.Visible = true
+        btn.BackgroundColor3 = ACC
+    end)
+
+    return page
+end
+
+local function switchTab(name)
+    if currentTab then
+        tabs[currentTab].Visible = false
+        tabButtons[currentTab].BackgroundColor3 = BG3
+    end
+    currentTab = name
+    tabs[name].Visible = true
+    tabButtons[name].BackgroundColor3 = ACC
+end
+
+local function addSection(parent, text)
+    local l = Instance.new("TextLabel", parent)
+    l.Size = UDim2.new(1, 0, 0, 20)
+    l.BackgroundTransparency = 1
+    l.Text = "  " .. text
+    l.TextColor3 = GOLD
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 12
+    l.TextXAlignment = Enum.TextXAlignment.Left
+end
+
+local function addLabel(parent, text)
+    local l = Instance.new("TextLabel", parent)
+    l.Size = UDim2.new(1, 0, 0, 18)
+    l.BackgroundTransparency = 1
+    l.Text = "  " .. text
+    l.TextColor3 = TXT
+    l.Font = Enum.Font.GothamMedium
+    l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    return l
+end
+
+local function addDivider(parent)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1, 0, 0, 1)
+    f.BackgroundColor3 = BG3
+    f.BorderSizePixel = 0
+end
+
+local function addToggle(parent, text, default, callback)
+    local fr = Instance.new("Frame", parent)
+    fr.Size = UDim2.new(1, 0, 0, 30)
+    fr.BackgroundColor3 = BG3
+    fr.BorderSizePixel = 0
+    Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 6)
+
+    local l = Instance.new("TextLabel", fr)
+    l.Size = UDim2.new(1, -54, 1, 0)
+    l.Position = UDim2.new(0, 10, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = TXT
+    l.Font = Enum.Font.GothamMedium
+    l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+
+    local tog = Instance.new("TextButton", fr)
+    tog.Size = UDim2.new(0, 42, 0, 20)
+    tog.Position = UDim2.new(1, -50, 0.5, -10)
+    tog.BorderSizePixel = 0
+    tog.Text = ""
+    Instance.new("UICorner", tog).CornerRadius = UDim.new(1, 0)
+
+    local dot = Instance.new("Frame", tog)
+    dot.Size = UDim2.new(0, 16, 0, 16)
+    dot.BorderSizePixel = 0
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+    local state = default or false
+    local function update()
+        tog.BackgroundColor3 = state and ON_C or OFF_C
+        TweenService:Create(dot, TweenInfo.new(0.12), {
+            Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        }):Play()
+    end
+    update()
+    tog.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+        if callback then callback(state) end
+    end)
+    return {Set = function(_, v) state = v; update() end, Get = function() return state end}
+end
+
+local function addButton(parent, text, callback)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1, 0, 0, 30)
+    b.BackgroundColor3 = ACC
+    b.Text = text
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 11
+    b.BorderSizePixel = 0
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    b.MouseButton1Click:Connect(callback)
+end
+
+local function addSlider(parent, text, min, max, default, callback)
+    local fr = Instance.new("Frame", parent)
+    fr.Size = UDim2.new(1, 0, 0, 40)
+    fr.BackgroundColor3 = BG3
+    fr.BorderSizePixel = 0
+    Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 6)
+
+    local l = Instance.new("TextLabel", fr)
+    l.Size = UDim2.new(1, -46, 0, 18)
+    l.Position = UDim2.new(0, 10, 0, 2)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = TXT
+    l.Font = Enum.Font.GothamMedium
+    l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+
+    local vl = Instance.new("TextLabel", fr)
+    vl.Size = UDim2.new(0, 36, 0, 18)
+    vl.Position = UDim2.new(1, -44, 0, 2)
+    vl.BackgroundTransparency = 1
+    vl.Text = tostring(default)
+    vl.TextColor3 = ACC
+    vl.Font = Enum.Font.GothamBold
+    vl.TextSize = 11
+    vl.TextXAlignment = Enum.TextXAlignment.Right
+
+    local bg = Instance.new("Frame", fr)
+    bg.Size = UDim2.new(1, -20, 0, 5)
+    bg.Position = UDim2.new(0, 10, 0, 26)
+    bg.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    bg.BorderSizePixel = 0
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = ACC
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local hit = Instance.new("TextButton", bg)
+    hit.Size = UDim2.new(1, 0, 0, 16)
+    hit.Position = UDim2.new(0, 0, 0.5, -8)
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+
+    local cur = default
+    local dragging = false
+    hit.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local x = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+            cur = math.floor(min + (max - min) * x + 0.5)
+            fill.Size = UDim2.new((cur - min) / (max - min), 0, 1, 0)
+            vl.Text = tostring(cur)
+            if callback then callback(cur) end
+        end
+    end)
+end
+
+--===================================================================================--
+--                              CREATE TABS                                           --
+--===================================================================================--
+
+local mainTab = createTab("Main", 1)
+local statsTab = createTab("Stats", 2)
+local teleTab = createTab("Tele", 3)
+local miscTab = createTab("Misc", 4)
+local chestTab = createTab("Chest", 5)
+
+-- MAIN TAB
+addSection(mainTab, "Auto Farm")
+
+addToggle(mainTab, "Auto Farm", false, function(state)
     _G.Farm = state
     while _G.Farm and task.wait(0.1) do
-        local suc, err = pcall(function()
+        pcall(function()
             local char = plr.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
@@ -235,15 +520,14 @@ S1:NewToggle("Auto Farm", nil, function(state)
                 _G.Target = nil
             end
         end)
-        if not suc then warn(err) end
     end
     _G.Target = nil
 end)
 
-S1:NewToggle("Auto Level", nil, function(state)
+addToggle(mainTab, "Auto Level", false, function(state)
     _G.LvlFarm = state
     while _G.LvlFarm and task.wait(0.15) do
-        local suc, err = pcall(function()
+        pcall(function()
             local char = plr.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
             local hrp = char.HumanoidRootPart
@@ -270,29 +554,25 @@ S1:NewToggle("Auto Level", nil, function(state)
                 atk()
             end
         end)
-        if not suc then warn(err) end
     end
     _G.Target = nil
 end)
 
-S1:NewToggle("Auto Quest", nil, function(state)
+addToggle(mainTab, "Auto Quest", false, function(state)
     _G.Quest = state
     while _G.Quest and task.wait(0.3) do pcall(acceptQuest) end
 end)
 
-S1:NewToggle("Bring Enemy", nil, function(state)
+addToggle(mainTab, "Bring Enemy", false, function(state)
     _G.Bring = state
     if not state then _G.Target = nil end
 end)
 
---- ====================
---- STATS TAB
---- ====================
-local T2 = Window:NewTab("Stats")
-local S2 = T2:NewSection("Auto Points")
+-- STATS TAB
+addSection(statsTab, "Auto Points")
 
 for _, s in pairs({"Melee","Defense","Sword","Demon Fruit"}) do
-    S2:NewToggle("Auto " .. s, nil, function(state)
+    addToggle(statsTab, "Auto " .. s, false, function(state)
         _G["S" .. s:gsub(" ","")] = state
         coroutine.wrap(function()
             while _G["S" .. s:gsub(" ","")] and task.wait(0.3) do
@@ -306,7 +586,7 @@ for _, s in pairs({"Melee","Defense","Sword","Demon Fruit"}) do
     end)
 end
 
-S2:NewButton("Melee > 1:1:1:1", nil, function()
+addButton(statsTab, "Melee > 1:1:1:1", function()
     pcall(function()
         local p = plr.Data.StatPoints.Value
         if p and p > 0 then
@@ -319,11 +599,8 @@ S2:NewButton("Melee > 1:1:1:1", nil, function()
     end)
 end)
 
---- ====================
---- TELEPORT TAB
---- ====================
-local T3 = Window:NewTab("Teleports")
-local S3 = T3:NewSection("Islands")
+-- TELEPORT TAB
+addSection(teleTab, "Islands")
 
 local islands = {
     {"Jungle", CFrame.new(-1242,30,-452)},
@@ -331,11 +608,9 @@ local islands = {
     {"Desert", CFrame.new(840,25,1250)},
     {"Frozen Village", CFrame.new(820,70,-1590)},
     {"Marine Fortress", CFrame.new(-920,40,3320)},
-    {"Sky Island 1", CFrame.new(-5100,320,530)},
-    {"Sky Island 2", CFrame.new(-7900,550,530)},
     {"Prison", CFrame.new(4900,8,900)},
-    {"Magma Village", CFrame.new(-5300,15,1300)},
     {"Colosseum", CFrame.new(-1420,15,-2940)},
+    {"Magma Village", CFrame.new(-5300,15,1300)},
     {"Graveyard", CFrame.new(-2950,50,-3650)},
     {"Snow Mountain", CFrame.new(550,90,-2220)},
     {"Fishman Island", CFrame.new(550,125,2820)},
@@ -346,12 +621,10 @@ local islands = {
     {"Great Tree", CFrame.new(8700,130,1750)},
     {"Castle on the Sea", CFrame.new(-5300,20,7000)},
     {"Haunted Castle", CFrame.new(-9500,145,6150)},
-    {"Ice Castle", CFrame.new(-5100,75,-7800)},
-    {"Forgotten Island", CFrame.new(-3000,10,-6500)},
 }
 
 for _, d in pairs(islands) do
-    S3:NewButton(d[1], nil, function()
+    addButton(teleTab, d[1], function()
         pcall(function()
             local char = plr.Character
             if char and char:FindFirstChild("HumanoidRootPart") then fly(d[2].Position) end
@@ -359,21 +632,19 @@ for _, d in pairs(islands) do
     end)
 end
 
---- ====================
---- MISC TAB
---- ====================
-local T4 = Window:NewTab("Misc")
-local S4 = T4:NewSection("Utilities")
+-- MISC TAB
+addSection(miscTab, "Utilities")
 
-S4:NewButton("Rejoin", nil, function() TeleS:Teleport(game.PlaceId, plr) end)
-S4:NewButton("Server Hop", nil, function()
+addButton(miscTab, "Rejoin", function() TeleportService:Teleport(game.PlaceId, plr) end)
+
+addButton(miscTab, "Server Hop", function()
     local suc, d = pcall(function()
-        return HttpS:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
     end)
     if suc and d and d.data then
         for _, v in pairs(d.data) do
             if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                TeleS:TeleportToPlaceInstance(game.PlaceId, v.id, plr)
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, plr)
                 break
             end
         end
@@ -382,113 +653,94 @@ end)
 
 _G.WS = 16
 _G.JP = 50
-RunS.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function()
     local char = plr.Character
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.WalkSpeed = _G.WS
         char.Humanoid.JumpPower = _G.JP
     end
 end)
-S4:NewSlider("Walk Speed", nil, 250, 16, function(s) _G.WS = s end)
-S4:NewSlider("Jump Power", nil, 500, 50, function(s) _G.JP = s end)
+addSlider(miscTab, "Walk Speed", 16, 250, 16, function(s) _G.WS = s end)
+addSlider(miscTab, "Jump Power", 50, 500, 50, function(s) _G.JP = s end)
 
-local S4b = T4:NewSection("Quick Teleports")
-S4b:NewButton("Start Island", nil, function()
-    pcall(function() if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then fly(Vector3.new(0, 10, 0)) end end)
-end)
-S4b:NewButton("Middle Town", nil, function()
-    pcall(function() if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then fly(Vector3.new(-80, 10, 1250)) end end)
-end)
-
---- ====================
---- CHEST FARM TAB
---- ====================
-pcall(function()
-local T5 = Window:NewTab("Chest Farm")
-local S5 = T5:NewSection("Auto Chest")
-
+-- CHEST FARM TAB
 _G.ChestFarm = false
 _G.AutoChalice = false
+local chestStats = {collected = 0, money = 0, chaliceFound = false, chaliceTimer = 14400, lastSpawn = os.clock(), status = "Idle"}
 
-S5:NewToggle("Auto Chest Farm (C)", nil, function(state)
+addSection(chestTab, "Auto Chest")
+
+local togChestFarm = addToggle(chestTab, "Auto Chest Farm (C)", false, function(state)
     _G.ChestFarm = state
+    chestStats.status = state and "Starting..." or "Stopped"
 end)
 
-S5:NewToggle("Auto Chalice Search", nil, function(state)
+addToggle(chestTab, "Auto Chalice Search", false, function(state)
     _G.AutoChalice = state
+    if state then chestStats.lastSpawn = os.clock() end
 end)
 
-local S5b = T5:NewSection("Chalice Status")
-local chaliceLabel = S5b:NewLabel("Chalice: Not found")
-local timerLabel = S5b:NewLabel("Chalice Timer: 4:00:00")
+addDivider(chestTab)
+addSection(chestTab, "Status")
 
-spawn(function()
-    local lastSpawn = os.clock()
-    while true do
-        task.wait(1)
-        local elapsed = os.clock() - lastSpawn
-        local remaining = 14400 - elapsed
-        local timerText
-        if remaining <= 0 then
-            timerText = "Chalice Timer: AVAILABLE NOW!"
-        else
-            local h = math.floor(remaining / 3600)
-            local m = math.floor((remaining % 3600) / 60)
-            local s = math.floor(remaining % 60)
-            timerText = string.format("Chalice Timer: %d:%02d:%02d", h, m, s)
-        end
-        pcall(function() timerLabel:UpdateText(timerText) end)
-        pcall(function() timerLabel.Text = timerText end)
+local chestStatusLabel = addLabel(chestTab, "Status: Idle")
+local chestCountLabel = addLabel(chestTab, "Chests: 0")
+local chestMoneyLabel = addLabel(chestTab, "Money: $0")
+local chaliceLabel = addLabel(chestTab, "Chalice: Not found")
+local chaliceTimerLabel = addLabel(chestTab, "Timer: 4:00:00")
 
-        local chaliceText = "Chalice: Not found"
-        pcall(function()
-            if plr.Backpack:FindFirstChild("God's Chalice") or (plr.Character and plr.Character:FindFirstChild("God's Chalice")) then
-                chaliceText = "Chalice: FOUND!"
-            end
-        end)
-        pcall(function() chaliceLabel:UpdateText(chaliceText) end)
-        pcall(function() chaliceLabel.Text = chaliceText end)
-    end
-end)
+addDivider(chestTab)
+addSection(chestTab, "Actions")
 
-S5:NewButton("Find Nearest Chest", nil, function()
+addButton(chestTab, "Find Nearest Chest", function()
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     local best, bd = nil, math.huge
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
-            local d = (obj.Position - hrp.Position).Magnitude
-            if d < bd then bd = d; best = obj end
+    pcall(function()
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
+                local d = (obj.Position - hrp.Position).Magnitude
+                if d < bd then bd = d; best = obj end
+            end
         end
-    end
+    end)
     if best then
+        chestStats.status = "Nearest: " .. best.Name .. " (" .. math.floor(bd) .. "m)"
         fly(best.Position + Vector3.new(0, 3, 0))
+    else
+        chestStats.status = "No chests found"
     end
 end)
 
-S5:NewButton("Collect All Chests", nil, function()
+addButton(chestTab, "Collect All Chests", function()
     spawn(function()
         while _G.ChestFarm do
             local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
             if not hrp then task.wait(1) continue end
 
             local chests = {}
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
-                    local d = (obj.Position - hrp.Position).Magnitude
-                    if d < 5000 then
-                        table.insert(chests, {part = obj, dist = d})
+            pcall(function()
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
+                        local d = (obj.Position - hrp.Position).Magnitude
+                        if d < 5000 then
+                            table.insert(chests, {part = obj, dist = d})
+                        end
                     end
                 end
-            end
+            end)
 
             table.sort(chests, function(a, b) return a.dist < b.dist end)
 
             for _, c in ipairs(chests) do
                 if not _G.ChestFarm then break end
                 if c.part and c.part.Parent then
+                    chestStats.status = "Moving to " .. c.part.Name .. " (" .. math.floor(c.dist) .. "m)"
                     fly(c.part.Position + Vector3.new(0, 3, 0))
                     task.wait(1.5)
+                    chestStats.collected = chestStats.collected + 1
+                    chestStats.money = chestStats.money + 1000
+                    chestStats.status = "Collected! Total: " .. chestStats.collected
                 end
             end
 
@@ -496,12 +748,91 @@ S5:NewButton("Collect All Chests", nil, function()
         end
     end)
 end)
+
+-- Chest stats updater
+spawn(function()
+    while true do
+        task.wait(0.5)
+        pcall(function()
+            chestStatusLabel.Text = "  Status: " .. chestStats.status
+            chestCountLabel.Text = "  Chests: " .. chestStats.collected
+            chestMoneyLabel.Text = "  Money: $" .. chestStats.money
+            chaliceLabel.Text = "  Chalice: " .. (chestStats.chaliceFound and "FOUND!" or "Not found")
+            chaliceLabel.TextColor3 = chestStats.chaliceFound and GOLD or TXT
+
+            local h = math.floor(chestStats.chaliceTimer / 3600)
+            local m = math.floor((chestStats.chaliceTimer % 3600) / 60)
+            local s = math.floor(chestStats.chaliceTimer % 60)
+            chaliceTimerLabel.Text = string.format("  Timer: %d:%02d:%02d", h, m, s)
+        end)
+    end
 end)
 
+-- Chalice timer updater
+spawn(function()
+    chestStats.lastSpawn = os.clock()
+    while true do
+        task.wait(3)
+        if not _G.AutoChalice then continue end
+        pcall(function()
+            local elapsed = os.clock() - chestStats.lastSpawn
+            chestStats.chaliceTimer = math.max(0, 14400 - elapsed)
+
+            if plr.Backpack:FindFirstChild("God's Chalice") or (plr.Character and plr.Character:FindFirstChild("God's Chalice")) then
+                if not chestStats.chaliceFound then
+                    chestStats.chaliceFound = true
+                    pcall(function()
+                        StarterGui:SetCore("SendNotification", {Title = "CHALICE!", Text = "God's Chalice found!", Duration = 5})
+                    end)
+                end
+            end
+        end)
+    end
 end)
 
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Blox Fruits",
-    Text = "Dmitri Kotakbass loaded!",
-    Duration = 3
-})
+-- Close + Toggle
+closeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false end)
+
+local toggleBtn = Instance.new("TextButton", mainGui)
+toggleBtn.Size = UDim2.new(0, 45, 0, 45)
+toggleBtn.Position = UDim2.new(0.93, 0, 0.75, 0)
+toggleBtn.Text = "BF"
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.TextColor3 = ACC
+toggleBtn.BackgroundColor3 = BG
+toggleBtn.BackgroundTransparency = 0.15
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+local tStroke = Instance.new("UIStroke", toggleBtn)
+tStroke.Thickness = 1.5
+tStroke.Color = ACC
+tStroke.Transparency = 0.4
+
+toggleBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible end)
+
+-- Keybinds
+UserInputService.InputBegan:Connect(function(inp, gpe)
+    if gpe then return end
+    if inp.KeyCode == Enum.KeyCode.C then
+        _G.ChestFarm = not _G.ChestFarm
+        chestStats.status = _G.ChestFarm and "Starting..." or "Stopped"
+        pcall(function() togChestFarm:Set(_G.ChestFarm) end)
+    end
+end)
+
+-- Start on first tab
+switchTab("Chest")
+
+-- Init
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Blox Fruits",
+        Text = "Dmitri Kotakbass loaded! Tab BF for menu",
+        Duration = 3
+    })
+end)
+
+print("[BloxFruits] Loaded — Native UI (no dependencies)")
