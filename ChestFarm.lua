@@ -27,9 +27,9 @@ end)
 local Config = {
     AutoChest = false,
     AutoChaliceSearch = false,
-    ChestRange = 6000,
-    CollectDelay = 0.5,
-    MoveSpeed = 500,
+    ChestRange = 4000,
+    CollectDelay = 0.8,
+    MoveSpeed = 420,
     ChaliceCheckInterval = 3,
     ChaliceSpawnInterval = 14400,
 }
@@ -37,6 +37,7 @@ local Config = {
 local Stats = {
     ChestsCollected = 0,
     MoneyEarned = 0,
+    StartMoney = 0,
     StartTime = os.clock(),
     ChaliceFound = false,
     ChaliceTimerLeft = 14400,
@@ -89,16 +90,18 @@ local function findChests()
     pcall(function()
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("Part") and obj.Name:find("Chest") and not isExcluded(obj.Name) then
-                local chestData = getChestType(obj.Name)
-                local distance = (obj.Position - hrp.Position).Magnitude
-                if distance <= Config.ChestRange then
-                    table.insert(chests, {
-                        part = obj,
-                        name = chestData.name,
-                        priority = chestData.priority,
-                        money = chestData.money,
-                        distance = distance,
-                    })
+                if obj.Parent and obj.Transparency < 0.5 then
+                    local chestData = getChestType(obj.Name)
+                    local distance = (obj.Position - hrp.Position).Magnitude
+                    if distance <= Config.ChestRange then
+                        table.insert(chests, {
+                            part = obj,
+                            name = chestData.name,
+                            priority = chestData.priority,
+                            money = chestData.money,
+                            distance = distance,
+                        })
+                    end
                 end
             end
         end
@@ -126,15 +129,29 @@ local function tweenTo(targetPos, offset)
     return true
 end
 
+local function getMoney()
+    local money = 0
+    pcall(function() money = plr.Data.Beli.Value end)
+    return money
+end
+
 local function collectChest(chest)
     if not chest or not chest.part or not chest.part.Parent then return false end
+    if chest.part.Transparency >= 0.5 then return false end
+
     Stats.Status = "Moving to " .. chest.name .. " (" .. math.floor(chest.distance) .. "m)"
+    local moneyBefore = getMoney()
+
     if tweenTo(chest.part.Position, 2) then
         task.wait(Config.CollectDelay)
-        Stats.ChestsCollected = Stats.ChestsCollected + 1
-        Stats.MoneyEarned = Stats.MoneyEarned + chest.money
-        Stats.Status = "Collected " .. chest.name .. " (+$" .. chest.money .. ")"
-        return true
+        if not chest.part or not chest.part.Parent then
+            local moneyAfter = getMoney()
+            local earned = math.max(0, moneyAfter - moneyBefore)
+            Stats.ChestsCollected = Stats.ChestsCollected + 1
+            Stats.MoneyEarned = Stats.MoneyEarned + earned
+            Stats.Status = "Collected " .. chest.name .. " (+$" .. earned .. ")"
+            return true
+        end
     end
     return false
 end
@@ -568,21 +585,9 @@ button(scroll, "Find Nearest Chest", function()
 end, CLR.glass2)
 
 button(scroll, "Collect All Chests", function()
-    spawn(function()
-        while Config.AutoChest do
-            local hrp = getHRP()
-            if not hrp then task.wait(1) continue end
-            local chests = findChests()
-            for _, c in ipairs(chests) do
-                if not Config.AutoChest then break end
-                if c.part and c.part.Parent then
-                    collectChest(c)
-                    task.wait(0.1)
-                end
-            end
-            task.wait(0.3)
-        end
-    end)
+    Config.AutoChest = true
+    pcall(function() togChest:Set(true) end)
+    Stats.Status = "Starting..."
 end, CLR.accent)
 
 button(scroll, "Reset Chalice Timer", function()
@@ -646,7 +651,8 @@ spawn(function()
             local elapsed = os.clock() - Stats.StartTime
             lStatus.Text = "Status: " .. Stats.Status
             lChests.Text = "Chests: " .. Stats.ChestsCollected
-            lMoney.Text = "Money: $" .. tostring(Stats.MoneyEarned)
+            local realMoney = getMoney()
+            lMoney.Text = "Money: $" .. tostring(realMoney)
             lChalice.Text = "Chalice: " .. (Stats.ChaliceFound and "FOUND!" or "Not found")
             lChalice.TextColor3 = Stats.ChaliceFound and CLR.gold or CLR.txt
 
@@ -655,8 +661,8 @@ spawn(function()
             local s = math.floor(Stats.ChaliceTimerLeft % 60)
             lTimer.Text = string.format("Timer: %d:%02d:%02d", h, m, s)
 
-            if Stats.ChaliceTimerLeft <= 0 and Config.AutoChaliceSearch then
-                lTimer.Text = "Timer: AVAILABLE!"
+            if Stats.ChaliceTimerLeft <= 0 then
+                lTimer.Text = "Timer: SPAWN POSSIBLE!"
                 lTimer.TextColor3 = CLR.green
             else
                 lTimer.TextColor3 = CLR.txt
@@ -683,17 +689,17 @@ spawn(function()
                 local chests = findChests()
                 if #chests == 0 then
                     Stats.Status = "Scanning..."
-                    task.wait(1)
+                    task.wait(1.5)
                     continue
                 end
                 for _, chest in ipairs(chests) do
                     if not Config.AutoChest or not alive() then break end
-                    if chest.part and chest.part.Parent then
+                    if chest.part and chest.part.Parent and chest.part.Transparency < 0.5 then
                         collectChest(chest)
-                        task.wait(0.05)
+                        task.wait(0.3)
                     end
                 end
-                task.wait(0.2)
+                task.wait(0.3)
             end
         end)
 
@@ -711,11 +717,19 @@ end)
 spawn(function()
     Stats.ChaliceLastSpawn = os.clock()
     while true do
-        task.wait(Config.ChaliceCheckInterval)
-        if not Config.AutoChaliceSearch or not alive() then continue end
+        task.wait(1)
         pcall(function()
             local elapsed = os.clock() - Stats.ChaliceLastSpawn
             Stats.ChaliceTimerLeft = math.max(0, Config.ChaliceSpawnInterval - elapsed)
+        end)
+    end
+end)
+
+spawn(function()
+    while true do
+        task.wait(Config.ChaliceCheckInterval)
+        if not alive() then continue end
+        pcall(function()
             if plr.Backpack:FindFirstChild("God's Chalice") or (plr.Character and plr.Character:FindFirstChild("God's Chalice")) then
                 if not Stats.ChaliceFound then
                     Stats.ChaliceFound = true
