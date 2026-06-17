@@ -381,6 +381,99 @@ end)
 S4b:NewButton("Middle Town", nil, function()
     pcall(function() if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then fly(Vector3.new(-80, 10, 1250)) end end)
 end)
+
+--- ====================
+--- CHEST FARM TAB
+--- ====================
+local T5 = Window:NewTab("Chest Farm")
+local S5 = T5:NewSection("Auto Chest")
+
+_G.ChestFarm = false
+_G.AutoChalice = false
+
+S5:NewToggle("Auto Chest Farm (C)", nil, function(state)
+    _G.ChestFarm = state
+end)
+
+S5:NewToggle("Auto Chalice Search", nil, function(state)
+    _G.AutoChalice = state
+end)
+
+local S5b = T5:NewSection("Chalice Status")
+local chaliceLabel = S5b:NewLabel("Chalice: Not found")
+local timerLabel = S5b:NewLabel("Chalice Timer: 4:00:00")
+
+spawn(function()
+    local lastSpawn = os.clock()
+    while true do
+        task.wait(1)
+        local elapsed = os.clock() - lastSpawn
+        local remaining = 14400 - elapsed
+        if remaining <= 0 then
+            timerLabel:UpdateText("Chalice Timer: AVAILABLE NOW!")
+        else
+            local h = math.floor(remaining / 3600)
+            local m = math.floor((remaining % 3600) / 60)
+            local s = math.floor(remaining % 60)
+            timerLabel:UpdateText(string.format("Chalice Timer: %d:%02d:%02d", h, m, s))
+        end
+
+        pcall(function()
+            if plr.Backpack:FindFirstChild("God's Chalice") or (plr.Character and plr.Character:FindFirstChild("God's Chalice")) then
+                chaliceLabel:UpdateText("Chalice: FOUND!")
+            else
+                chaliceLabel:UpdateText("Chalice: Not found")
+            end
+        end)
+    end
+end)
+
+S5:NewButton("Find Nearest Chest", nil, function()
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local best, bd = nil, math.huge
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
+            local d = (obj.Position - hrp.Position).Magnitude
+            if d < bd then bd = d; best = obj end
+        end
+    end
+    if best then
+        fly(best.Position + Vector3.new(0, 3, 0))
+    end
+end)
+
+S5:NewButton("Collect All Chests", nil, function()
+    spawn(function()
+        while _G.ChestFarm do
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then task.wait(1) continue end
+
+            local chests = {}
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Part") and obj.Name:find("Chest") and not obj.Name:find("Mirage") and not obj.Name:find("Fragment") and not obj.Name:find("Cursed") then
+                    local d = (obj.Position - hrp.Position).Magnitude
+                    if d < 5000 then
+                        table.insert(chests, {part = obj, dist = d})
+                    end
+                end
+            end
+
+            table.sort(chests, function(a, b) return a.dist < b.dist end)
+
+            for _, c in ipairs(chests) do
+                if not _G.ChestFarm then break end
+                if c.part and c.part.Parent then
+                    fly(c.part.Position + Vector3.new(0, 3, 0))
+                    task.wait(1.5)
+                end
+            end
+
+            task.wait(1)
+        end
+    end)
+end)
+
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
