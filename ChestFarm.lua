@@ -27,7 +27,7 @@ end)
 local Config = {
     AutoChest = false,
     AutoChaliceSearch = false,
-    ChestRange = 4000,
+    ChestRange = 3000,
     CollectDelay = 0.8,
     MoveSpeed = 420,
     ChaliceCheckInterval = 3,
@@ -118,14 +118,27 @@ end
 local function tweenTo(targetPos, offset)
     local hrp = getHRP()
     if not hrp then return false end
+    local char = plr.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
+
     local pos = targetPos + Vector3.new(0, offset or 2, 0)
     local dist = (pos - hrp.Position).Magnitude
-    if dist < 1 then return true end
-    local duration = math.clamp(dist / Config.MoveSpeed, 0.1, 2)
-    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
-    tween:Play()
-    tween.Completed:Wait()
-    task.wait(0.1)
+    if dist < 3 then return true end
+
+    hum:MoveTo(Vector3.new(pos.X, hrp.Position.Y, pos.Z))
+
+    local start = os.clock()
+    local timeout = math.clamp(dist / 15, 2, 12)
+    while os.clock() - start < timeout do
+        if not alive() then return false end
+        local d = (Vector3.new(pos.X, hrp.Position.Y, pos.Z) - hrp.Position).Magnitude
+        if d < 4 then return true end
+        task.wait(0.15)
+    end
+
+    hum:MoveTo(Vector3.new(pos.X, pos.Y, pos.Z))
+    task.wait(0.3)
     return true
 end
 
@@ -143,15 +156,17 @@ local function collectChest(chest)
     local moneyBefore = getMoney()
 
     if tweenTo(chest.part.Position, 2) then
-        task.wait(Config.CollectDelay)
-        if not chest.part or not chest.part.Parent then
-            local moneyAfter = getMoney()
-            local earned = math.max(0, moneyAfter - moneyBefore)
+        task.wait(0.5 + math.random() * 0.5)
+        local moneyAfter = getMoney()
+        local earned = math.max(0, moneyAfter - moneyBefore)
+        if earned > 0 then
             Stats.ChestsCollected = Stats.ChestsCollected + 1
             Stats.MoneyEarned = Stats.MoneyEarned + earned
             Stats.Status = "Collected " .. chest.name .. " (+$" .. earned .. ")"
-            return true
+        else
+            Stats.Status = "Visited " .. chest.name .. " (no money)"
         end
+        return true
     end
     return false
 end
@@ -611,7 +626,7 @@ end
 local function closePanel()
     if not panelOpen then return end
     panelOpen = false
-    fadeOut(mainFrame, 0.25)
+    mainFrame.Visible = false
 end
 
 circ.MouseButton1Click:Connect(function()
@@ -679,9 +694,9 @@ end)
 
 spawn(function()
     while true do
-        task.wait(0.2)
-        if not Config.AutoChest then task.wait(0.3) continue end
-        if not alive() then task.wait(1) continue end
+        task.wait(0.5)
+        if not Config.AutoChest then task.wait(1) continue end
+        if not alive() then task.wait(2) continue end
 
         local ok, err = pcall(function()
             while Config.AutoChest do
@@ -689,23 +704,23 @@ spawn(function()
                 local chests = findChests()
                 if #chests == 0 then
                     Stats.Status = "Scanning..."
-                    task.wait(1.5)
+                    task.wait(2 + math.random() * 2)
                     continue
                 end
                 for _, chest in ipairs(chests) do
                     if not Config.AutoChest or not alive() then break end
                     if chest.part and chest.part.Parent and chest.part.Transparency < 0.5 then
                         collectChest(chest)
-                        task.wait(0.3)
+                        task.wait(0.5 + math.random() * 1)
                     end
                 end
-                task.wait(0.3)
+                task.wait(1 + math.random() * 2)
             end
         end)
 
         if not ok then
             Stats.Status = "Error"
-            task.wait(1)
+            task.wait(2)
         end
     end
 end)
