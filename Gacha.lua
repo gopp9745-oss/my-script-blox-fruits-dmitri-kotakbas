@@ -519,9 +519,9 @@ local function spinAnimation(callback)
         task.spawn(function()
             for i = 1, 5 do
                 mainStroke.Color = Color3.fromRGB(200, 50, 255)
-                wait(0.2)
+                task.wait(0.2)
                 mainStroke.Color = Color3.fromRGB(255, 215, 0)
-                wait(0.2)
+                task.wait(0.2)
             end
             mainStroke.Color = Color3.fromRGB(100, 50, 200)
         end)
