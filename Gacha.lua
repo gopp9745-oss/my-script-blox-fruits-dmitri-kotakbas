@@ -3,10 +3,6 @@
 --                    Визуальная гача с шансом x8 на легендарный фрукт                 --
 --===================================================================================--
 
---===================================================================================--
---                              СЕРВИСЫ                                               --
---===================================================================================--
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -17,46 +13,60 @@ local plr = Players.LocalPlayer
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
 --===================================================================================--
---                              ТАБЛИЦА ФРУКТОВ                                       --
+--                              ТАБЛИЦА ФРУКТОВ (АКТУАЛЬНАЯ)                          --
 --===================================================================================--
 
 local FruitDatabase = {
-    -- Обычные (Common) — базовый шанс
-    {name = "Spin",        rarity = "Common",      color = Color3.fromRGB(150,150,150), chance = 25},
-    {name = "Bomb",        rarity = "Common",      color = Color3.fromRGB(150,150,150), chance = 25},
-    {name = "Smoke",       rarity = "Common",      color = Color3.fromRGB(150,150,150), chance = 25},
-    {name = "Flame",       rarity = "Common",      color = Color3.fromRGB(150,150,150), chance = 25},
-    {name = "Falcon",      rarity = "Common",      color = Color3.fromRGB(150,150,150), chance = 25},
+    -- Common (7)
+    {name = "Rocket",      rarity = "Common",      color = Color3.fromRGB(180,180,180), chance = 20},
+    {name = "Spin",        rarity = "Common",      color = Color3.fromRGB(160,160,160), chance = 20},
+    {name = "Blade",       rarity = "Common",      color = Color3.fromRGB(170,170,170), chance = 20},
+    {name = "Spring",      rarity = "Common",      color = Color3.fromRGB(150,200,150), chance = 20},
+    {name = "Bomb",        rarity = "Common",      color = Color3.fromRGB(140,140,140), chance = 20},
+    {name = "Smoke",       rarity = "Common",      color = Color3.fromRGB(130,130,130), chance = 20},
+    {name = "Spike",       rarity = "Common",      color = Color3.fromRGB(120,120,120), chance = 20},
 
-    -- Необычные (Uncommon)
+    -- Uncommon (6)
+    {name = "Flame",       rarity = "Uncommon",    color = Color3.fromRGB(255,100,30), chance = 15},
     {name = "Ice",         rarity = "Uncommon",    color = Color3.fromRGB(80,200,255), chance = 15},
     {name = "Sand",        rarity = "Uncommon",    color = Color3.fromRGB(210,180,100), chance = 15},
-    {name = "Dark",        rarity = "Uncommon",    color = Color3.fromRGB(60,60,60), chance = 15},
+    {name = "Dark",        rarity = "Uncommon",    color = Color3.fromRGB(60,60,80), chance = 15},
+    {name = "Eagle",       rarity = "Uncommon",    color = Color3.fromRGB(200,180,100), chance = 15},
     {name = "Diamond",     rarity = "Uncommon",    color = Color3.fromRGB(130,230,255), chance = 15},
-    {name = "Light",       rarity = "Uncommon",    color = Color3.fromRGB(255,255,150), chance = 15},
 
-    -- Редкие (Rare)
-    {name = "Magma",       rarity = "Rare",        color = Color3.fromRGB(255,100,30), chance = 8},
-    {name = "Quake",       rarity = "Rare",        color = Color3.fromRGB(100,200,255), chance = 8},
-    {name = "Buddha",      rarity = "Rare",        color = Color3.fromRGB(255,215,0), chance = 8},
-    {name = "Love",        rarity = "Rare",        color = Color3.fromRGB(255,100,150), chance = 8},
-    {name = "Spider",      rarity = "Rare",        color = Color3.fromRGB(180,50,50), chance = 8},
+    -- Rare (4)
+    {name = "Light",       rarity = "Rare",        color = Color3.fromRGB(255,255,150), chance = 10},
+    {name = "Rubber",      rarity = "Rare",        color = Color3.fromRGB(200,80,80), chance = 10},
+    {name = "Ghost",       rarity = "Rare",        color = Color3.fromRGB(200,200,255), chance = 10},
+    {name = "Magma",       rarity = "Rare",        color = Color3.fromRGB(255,80,20), chance = 10},
 
-    -- Легендарные (Legendary) — x8 шанс!
-    {name = "Control",     rarity = "Legendary",   color = Color3.fromRGB(0,100,200), chance = 4},
-    {name = "Blizzard",    rarity = "Legendary",   color = Color3.fromRGB(150,220,255), chance = 4},
-    {name = "Pain",        rarity = "Legendary",   color = Color3.fromRGB(200,0,200), chance = 4},
-    {name = "Ghost",       rarity = "Legendary",   color = Color3.fromRGB(200,200,255), chance = 4},
-    {name = "Mammoth",     rarity = "Legendary",   color = Color3.fromRGB(139,90,43), chance = 4},
-    {name = "Barrier",     rarity = "Legendary",   color = Color3.fromRGB(255,180,0), chance = 4},
+    -- Legendary (11)
+    {name = "Quake",       rarity = "Legendary",   color = Color3.fromRGB(100,200,255), chance = 5},
+    {name = "Buddha",      rarity = "Legendary",   color = Color3.fromRGB(255,215,0), chance = 5},
+    {name = "Love",        rarity = "Legendary",   color = Color3.fromRGB(255,100,150), chance = 5},
+    {name = "Creation",    rarity = "Legendary",   color = Color3.fromRGB(100,200,100), chance = 5},
+    {name = "Spider",      rarity = "Legendary",   color = Color3.fromRGB(180,50,50), chance = 5},
+    {name = "Sound",       rarity = "Legendary",   color = Color3.fromRGB(180,100,255), chance = 5},
+    {name = "Phoenix",     rarity = "Legendary",   color = Color3.fromRGB(0,180,255), chance = 5},
+    {name = "Portal",      rarity = "Legendary",   color = Color3.fromRGB(150,50,200), chance = 5},
+    {name = "Lightning",   rarity = "Legendary",   color = Color3.fromRGB(255,255,0), chance = 5},
+    {name = "Pain",        rarity = "Legendary",   color = Color3.fromRGB(200,0,200), chance = 5},
+    {name = "Blizzard",    rarity = "Legendary",   color = Color3.fromRGB(150,220,255), chance = 5},
 
-    -- Мифические (Mythical) — x8 шанс на КРУТОЙ фрукт!
+    -- Mythical (13)
+    {name = "Gravity",     rarity = "Mythical",    color = Color3.fromRGB(150,50,200), chance = 2},
+    {name = "Mammoth",     rarity = "Mythical",    color = Color3.fromRGB(139,90,43), chance = 2},
+    {name = "T-Rex",       rarity = "Mythical",    color = Color3.fromRGB(80,150,50), chance = 2},
     {name = "Dough",       rarity = "Mythical",    color = Color3.fromRGB(255,180,220), chance = 2},
-    {name = "Dragon",      rarity = "Mythical",    color = Color3.fromRGB(200,50,50), chance = 2},
-    {name = "Spirit",      rarity = "Mythical",    color = Color3.fromRGB(180,100,255), chance = 2},
+    {name = "Shadow",      rarity = "Mythical",    color = Color3.fromRGB(80,50,120), chance = 2},
     {name = "Venom",       rarity = "Mythical",    color = Color3.fromRGB(100,200,50), chance = 2},
-    {name = "Leopard",     rarity = "Mythical",    color = Color3.fromRGB(255,200,50), chance = 2},
+    {name = "Gas",         rarity = "Mythical",    color = Color3.fromRGB(180,220,100), chance = 2},
+    {name = "Tiger",       rarity = "Mythical",    color = Color3.fromRGB(255,150,0), chance = 2},
+    {name = "Yeti",        rarity = "Mythical",    color = Color3.fromRGB(200,230,255), chance = 2},
     {name = "Kitsune",     rarity = "Mythical",    color = Color3.fromRGB(0,150,255), chance = 2},
+    {name = "Control",     rarity = "Mythical",    color = Color3.fromRGB(0,100,200), chance = 2},
+    {name = "Dragon",      rarity = "Mythical",    color = Color3.fromRGB(200,50,50), chance = 2},
+    {name = "Leopard",     rarity = "Mythical",    color = Color3.fromRGB(255,200,50), chance = 2},
 }
 
 --===================================================================================--
@@ -66,7 +76,6 @@ local FruitDatabase = {
 local X8_MULTIPLIER = 8
 
 local function getX8Fruit()
-    -- Собираем только Legendary и Mythical
     local legendary = {}
     local mythical = {}
     for _, f in ipairs(FruitDatabase) do
@@ -77,7 +86,6 @@ local function getX8Fruit()
         end
     end
 
-    -- x8 шанс: 8/10 на Mythical, 2/10 на Legendary
     local roll = math.random(1, 10)
     if roll <= 8 and #mythical > 0 then
         return mythical[math.random(1, #mythical)]
@@ -115,7 +123,6 @@ local function playSpinSound()
         local s = Instance.new("Sound")
         s.SoundId = "rbxassetid://6042053626"
         s.Volume = 0.8
-        s.PlayOnRemove = false
         s.Parent = SoundService
         s:Play()
         game:GetService("Debris"):AddItem(s, 2)
@@ -144,7 +151,7 @@ local function playWinSound(rarity)
 end
 
 --===================================================================================--
---                              UI: СОЗДАНИЕ                                           --
+--                              UI                                                     --
 --===================================================================================--
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -153,7 +160,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = plr:WaitForChild("PlayerGui")
 
--- Основной фрейм
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 500, 0, 650)
@@ -165,29 +171,22 @@ MainFrame.Draggable = true
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 16)
-mainCorner.Parent = MainFrame
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
-local mainStroke = Instance.new("UIStroke")
+local mainStroke = Instance.new("UIStroke", MainFrame)
 mainStroke.Color = Color3.fromRGB(100, 50, 200)
 mainStroke.Thickness = 3
-mainStroke.Parent = MainFrame
 
--- Заголовок
-local TitleLabel = Instance.new("TextLabel")
+local TitleLabel = Instance.new("TextLabel", MainFrame)
 TitleLabel.Name = "Title"
 TitleLabel.Size = UDim2.new(1, 0, 0, 50)
-TitleLabel.Position = UDim2.new(0, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "FRUIT GACHA — x8 CHANCE"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 TitleLabel.TextScaled = true
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Parent = MainFrame
 
--- Подзаголовок с шансом
-local SubtitleLabel = Instance.new("TextLabel")
+local SubtitleLabel = Instance.new("TextLabel", MainFrame)
 SubtitleLabel.Name = "Subtitle"
 SubtitleLabel.Size = UDim2.new(1, 0, 0, 25)
 SubtitleLabel.Position = UDim2.new(0, 0, 0, 50)
@@ -196,29 +195,21 @@ SubtitleLabel.Text = "x8 шанс на Legendary/Mythical!"
 SubtitleLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
 SubtitleLabel.TextScaled = true
 SubtitleLabel.Font = Enum.Font.Gotham
-SubtitleLabel.Parent = MainFrame
 
--- Зона прокрутки (барабан)
-local ScrollFrame = Instance.new("Frame")
+local ScrollFrame = Instance.new("Frame", MainFrame)
 ScrollFrame.Name = "ScrollFrame"
 ScrollFrame.Size = UDim2.new(0.85, 0, 0, 200)
 ScrollFrame.Position = UDim2.new(0.075, 0, 0, 85)
 ScrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ClipsDescendants = true
-ScrollFrame.Parent = MainFrame
 
-local scrollCorner = Instance.new("UICorner")
-scrollCorner.CornerRadius = UDim.new(0, 12)
-scrollCorner.Parent = ScrollFrame
-
-local scrollStroke = Instance.new("UIStroke")
+Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 12)
+local scrollStroke = Instance.new("UIStroke", ScrollFrame)
 scrollStroke.Color = Color3.fromRGB(80, 40, 160)
 scrollStroke.Thickness = 2
-scrollStroke.Parent = ScrollFrame
 
--- Стрелка-указатель
-local Arrow = Instance.new("TextLabel")
+local Arrow = Instance.new("TextLabel", ScrollFrame)
 Arrow.Name = "Arrow"
 Arrow.Size = UDim2.new(0, 40, 0, 30)
 Arrow.Position = UDim2.new(0.5, -20, 1, -30)
@@ -228,30 +219,21 @@ Arrow.TextColor3 = Color3.fromRGB(255, 50, 50)
 Arrow.TextScaled = true
 Arrow.Font = Enum.Font.GothamBold
 Arrow.ZIndex = 5
-Arrow.Parent = ScrollFrame
 
--- Контейнер для карточек фруктов
-local CardsContainer = Instance.new("Frame")
+local CardsContainer = Instance.new("Frame", ScrollFrame)
 CardsContainer.Name = "CardsContainer"
 CardsContainer.Size = UDim2.new(3, 0, 1, 0)
-CardsContainer.Position = UDim2.new(0, 0, 0, 0)
 CardsContainer.BackgroundTransparency = 1
-CardsContainer.Parent = ScrollFrame
 
--- Текущий результат
-local ResultFrame = Instance.new("Frame")
+local ResultFrame = Instance.new("Frame", MainFrame)
 ResultFrame.Name = "ResultFrame"
 ResultFrame.Size = UDim2.new(0.85, 0, 0, 80)
 ResultFrame.Position = UDim2.new(0.075, 0, 0, 300)
 ResultFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 ResultFrame.BorderSizePixel = 0
-ResultFrame.Parent = MainFrame
+Instance.new("UICorner", ResultFrame).CornerRadius = UDim.new(0, 12)
 
-local resultCorner = Instance.new("UICorner")
-resultCorner.CornerRadius = UDim.new(0, 12)
-resultCorner.Parent = ResultFrame
-
-local FruitNameLabel = Instance.new("TextLabel")
+local FruitNameLabel = Instance.new("TextLabel", ResultFrame)
 FruitNameLabel.Name = "FruitName"
 FruitNameLabel.Size = UDim2.new(1, 0, 0, 35)
 FruitNameLabel.Position = UDim2.new(0, 0, 0, 5)
@@ -260,9 +242,8 @@ FruitNameLabel.Text = "Нажми кнопку!"
 FruitNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FruitNameLabel.TextScaled = true
 FruitNameLabel.Font = Enum.Font.GothamBold
-FruitNameLabel.Parent = ResultFrame
 
-local RarityLabel = Instance.new("TextLabel")
+local RarityLabel = Instance.new("TextLabel", ResultFrame)
 RarityLabel.Name = "Rarity"
 RarityLabel.Size = UDim2.new(1, 0, 0, 25)
 RarityLabel.Position = UDim2.new(0, 0, 0, 42)
@@ -271,9 +252,8 @@ RarityLabel.Text = ""
 RarityLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 RarityLabel.TextScaled = true
 RarityLabel.Font = Enum.Font.Gotham
-RarityLabel.Parent = ResultFrame
 
-local ChanceLabel = Instance.new("TextLabel")
+local ChanceLabel = Instance.new("TextLabel", ResultFrame)
 ChanceLabel.Name = "Chance"
 ChanceLabel.Size = UDim2.new(1, 0, 0, 20)
 ChanceLabel.Position = UDim2.new(0, 0, 0, 60)
@@ -282,10 +262,8 @@ ChanceLabel.Text = ""
 ChanceLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 ChanceLabel.TextScaled = true
 ChanceLabel.Font = Enum.Font.GothamBold
-ChanceLabel.Parent = ResultFrame
 
--- Кнопка "Крутить"
-local SpinButton = Instance.new("TextButton")
+local SpinButton = Instance.new("TextButton", MainFrame)
 SpinButton.Name = "SpinButton"
 SpinButton.Size = UDim2.new(0.85, 0, 0, 55)
 SpinButton.Position = UDim2.new(0.075, 0, 0, 400)
@@ -295,14 +273,9 @@ SpinButton.Text = "КРУТИТЬ (x8)"
 SpinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpinButton.TextScaled = true
 SpinButton.Font = Enum.Font.GothamBold
-SpinButton.Parent = MainFrame
+Instance.new("UICorner", SpinButton).CornerRadius = UDim.new(0, 12)
 
-local spinCorner = Instance.new("UICorner")
-spinCorner.CornerRadius = UDim.new(0, 12)
-spinCorner.Parent = SpinButton
-
--- Кнопка "Забрать в инвентарь"
-local ClaimButton = Instance.new("TextButton")
+local ClaimButton = Instance.new("TextButton", MainFrame)
 ClaimButton.Name = "ClaimButton"
 ClaimButton.Size = UDim2.new(0.85, 0, 0, 45)
 ClaimButton.Position = UDim2.new(0.075, 0, 0, 470)
@@ -313,14 +286,9 @@ ClaimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClaimButton.TextScaled = true
 ClaimButton.Font = Enum.Font.GothamBold
 ClaimButton.Visible = false
-ClaimButton.Parent = MainFrame
+Instance.new("UICorner", ClaimButton).CornerRadius = UDim.new(0, 12)
 
-local claimCorner = Instance.new("UICorner")
-claimCorner.CornerRadius = UDim.new(0, 12)
-claimCorner.Parent = ClaimButton
-
--- Кнопка "Купить у Бели (Ближайший NPC)"
-local BuyButton = Instance.new("TextButton")
+local BuyButton = Instance.new("TextButton", MainFrame)
 BuyButton.Name = "BuyButton"
 BuyButton.Size = UDim2.new(0.85, 0, 0, 40)
 BuyButton.Position = UDim2.new(0.075, 0, 0, 525)
@@ -330,14 +298,9 @@ BuyButton.Text = "КУПИТЬ У БЕЛИ (NPC)"
 BuyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BuyButton.TextScaled = true
 BuyButton.Font = Enum.Font.GothamBold
-BuyButton.Parent = MainFrame
+Instance.new("UICorner", BuyButton).CornerRadius = UDim.new(0, 12)
 
-local buyCorner = Instance.new("UICorner")
-buyCorner.CornerRadius = UDim.new(0, 12)
-buyCorner.Parent = BuyButton
-
--- Кнопка открытия/закрытия (мини-кнопка)
-local ToggleButton = Instance.new("TextButton")
+local ToggleButton = Instance.new("TextButton", ScreenGui)
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Size = UDim2.new(0, 60, 0, 60)
 ToggleButton.Position = UDim2.new(1, -70, 0.5, -30)
@@ -347,19 +310,13 @@ ToggleButton.Text = "GACHA"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.TextScaled = true
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Parent = ScreenGui
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 30)
-toggleCorner.Parent = ToggleButton
-
-local toggleStroke = Instance.new("UIStroke")
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 30)
+local toggleStroke = Instance.new("UIStroke", ToggleButton)
 toggleStroke.Color = Color3.fromRGB(200, 150, 255)
 toggleStroke.Thickness = 2
-toggleStroke.Parent = ToggleButton
 
 --===================================================================================--
---                              UI: АНИМАЦИЯ ПРОКРУТКИ                                 --
+--                              АНИМАЦИЯ ПРОКРУТКИ                                     --
 --===================================================================================--
 
 local isSpinning = false
@@ -374,63 +331,44 @@ local function createFruitCard(fruit, index)
     card.BorderSizePixel = 0
     card.Parent = CardsContainer
 
-    local cardCorner = Instance.new("UICorner")
-    cardCorner.CornerRadius = UDim.new(0, 10)
-    cardCorner.Parent = card
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+    local cs = Instance.new("UIStroke", card)
+    cs.Color = fruit.color
+    cs.Thickness = 2
 
-    local cardStroke = Instance.new("UIStroke")
-    cardStroke.Color = fruit.color
-    cardStroke.Thickness = 2
-    cardStroke.Parent = card
-
-    -- Иконка фрукта (круг с цветом)
-    local icon = Instance.new("Frame")
-    icon.Name = "Icon"
+    local icon = Instance.new("Frame", card)
     icon.Size = UDim2.new(0, 70, 0, 70)
     icon.Position = UDim2.new(0.5, -35, 0, 15)
     icon.BackgroundColor3 = fruit.color
     icon.BorderSizePixel = 0
-    icon.Parent = card
+    Instance.new("UICorner", icon).CornerRadius = UDim.new(1, 0)
 
-    local iconCorner = Instance.new("UICorner")
-    iconCorner.CornerRadius = UDim.new(1, 0)
-    iconCorner.Parent = icon
+    local nl = Instance.new("TextLabel", card)
+    nl.Size = UDim2.new(1, 0, 0, 25)
+    nl.Position = UDim2.new(0, 0, 0, 95)
+    nl.BackgroundTransparency = 1
+    nl.Text = fruit.name
+    nl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nl.TextScaled = true
+    nl.Font = Enum.Font.GothamBold
 
-    -- Название фрукта
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Name = "Name"
-    nameLabel.Size = UDim2.new(1, 0, 0, 25)
-    nameLabel.Position = UDim2.new(0, 0, 0, 95)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = fruit.name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.Parent = card
+    local rl = Instance.new("TextLabel", card)
+    rl.Size = UDim2.new(1, 0, 0, 20)
+    rl.Position = UDim2.new(0, 0, 0, 122)
+    rl.BackgroundTransparency = 1
+    rl.Text = fruit.rarity
+    rl.TextColor3 = fruit.color
+    rl.TextScaled = true
+    rl.Font = Enum.Font.Gotham
 
-    -- Редкость
-    local rarityLabel = Instance.new("TextLabel")
-    rarityLabel.Name = "Rarity"
-    rarityLabel.Size = UDim2.new(1, 0, 0, 20)
-    rarityLabel.Position = UDim2.new(0, 0, 0, 122)
-    rarityLabel.BackgroundTransparency = 1
-    rarityLabel.Text = fruit.rarity
-    rarityLabel.TextColor3 = fruit.color
-    rarityLabel.TextScaled = true
-    rarityLabel.Font = Enum.Font.Gotham
-    rarityLabel.Parent = card
-
-    -- Шанс
-    local chanceLabel = Instance.new("TextLabel")
-    chanceLabel.Name = "Chance"
-    chanceLabel.Size = UDim2.new(1, 0, 0, 18)
-    chanceLabel.Position = UDim2.new(0, 0, 0, 145)
-    chanceLabel.BackgroundTransparency = 1
-    chanceLabel.Text = "x8: " .. tostring(fruit.chance * X8_MULTIPLIER) .. "%"
-    chanceLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    chanceLabel.TextScaled = true
-    chanceLabel.Font = Enum.Font.GothamBold
-    chanceLabel.Parent = card
+    local cl = Instance.new("TextLabel", card)
+    cl.Size = UDim2.new(1, 0, 0, 18)
+    cl.Position = UDim2.new(0, 0, 0, 145)
+    cl.BackgroundTransparency = 1
+    cl.Text = "x8: " .. tostring(fruit.chance * X8_MULTIPLIER) .. "%"
+    cl.TextColor3 = Color3.fromRGB(255, 215, 0)
+    cl.TextScaled = true
+    cl.Font = Enum.Font.GothamBold
 
     return card
 end
@@ -439,22 +377,19 @@ local function populateCards()
     for _, child in ipairs(CardsContainer:GetChildren()) do
         child:Destroy()
     end
-
     local totalFruits = #FruitDatabase
     for i = 1, totalFruits * 3 do
         local fruit = FruitDatabase[((i - 1) % totalFruits) + 1]
         createFruitCard(fruit, i)
     end
-
     CardsContainer.Position = UDim2.new(0, 0, 0, 0)
 end
 
-local function spinAnimation(callback)
+local function spinAnimation()
     if isSpinning then return end
     isSpinning = true
 
     playSpinSound()
-
     populateCards()
 
     local resultFruit
@@ -466,8 +401,6 @@ local function spinAnimation(callback)
 
     local totalFruits = #FruitDatabase
     local targetIndex = math.random(1, totalFruits)
-    local targetFruit = FruitDatabase[targetIndex]
-
     local winPosition = (targetIndex - 1) * 155 + 75
 
     CardsContainer.Position = UDim2.new(0, 0, 0, 0)
@@ -483,20 +416,17 @@ local function spinAnimation(callback)
     flashConn = game:GetService("RunService").Heartbeat:Connect(function()
         flashCount = flashCount + 1
         if flashCount % 8 == 0 then
-            local randIdx = math.random(1, totalFruits)
-            local rf = FruitDatabase[randIdx]
-            FruitNameLabel.Text = rf.name
-            FruitNameLabel.TextColor3 = rf.color
+            local ri = math.random(1, totalFruits)
+            FruitNameLabel.Text = FruitDatabase[ri].name
+            FruitNameLabel.TextColor3 = FruitDatabase[ri].color
         end
     end)
 
     tween:Play()
     tween.Completed:Wait()
-
     flashConn:Disconnect()
 
     currentFruit = resultFruit
-
     FruitNameLabel.Text = resultFruit.name
     FruitNameLabel.TextColor3 = resultFruit.color
 
@@ -514,10 +444,9 @@ local function spinAnimation(callback)
 
     playWinSound(resultFruit.rarity)
 
-    -- Эффект свечения для Mythical
     if resultFruit.rarity == "Mythical" then
         task.spawn(function()
-            for i = 1, 5 do
+            for _ = 1, 5 do
                 mainStroke.Color = Color3.fromRGB(200, 50, 255)
                 task.wait(0.2)
                 mainStroke.Color = Color3.fromRGB(255, 215, 0)
@@ -529,60 +458,39 @@ local function spinAnimation(callback)
 
     ClaimButton.Visible = true
     SpinButton.Text = "КРУТИТЬ СНОВА (x8)"
-
-    if callback then callback(resultFruit) end
-
     isSpinning = false
 end
 
 --===================================================================================--
---                              ИНВЕНТАРЬ: ДОБАВЛЕНИЕ                                  --
+--                              ИНВЕНТАРЬ                                              --
 --===================================================================================--
 
 local function claimFruit(fruit)
-    if not fruit then
-        warn("[GACHA] Нет фрукта для добавления!")
-        return false
-    end
+    if not fruit then return false end
 
-    local success, err = pcall(function()
+    local ok = pcall(function()
         CommF:InvokeServer("BuyUnverifiedCompassItem", fruit.name)
     end)
 
-    if success then
-        StarterGui:SetCore("SendNotification", {
-            Title = "GACHA WIN!",
-            Text = "Получен: " .. fruit.name .. " (" .. fruit.rarity .. ")!",
-            Duration = 5
-        })
-        return true
-    else
-        -- Попытка через альтернативный метод
-        local success2, err2 = pcall(function()
+    if not ok then
+        pcall(function()
             CommF:InvokeServer("AddToInventory", fruit.name)
         end)
-
-        if success2 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "GACHA WIN!",
-                Text = "Получен: " .. fruit.name .. " (" .. fruit.rarity .. ")!",
-                Duration = 5
-            })
-            return true
-        else
-            warn("[GACHA] Ошибка добавления: " .. tostring(err) .. " | " .. tostring(err2))
-            StarterGui:SetCore("SendNotification", {
-                Title = "GACHA",
-                Text = "Фрукт: " .. fruit.name .. " — добавь вручную!",
-                Duration = 5
-            })
-            return false
-        end
     end
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "GACHA WIN!",
+            Text = fruit.name .. " (" .. fruit.rarity .. ")",
+            Duration = 5
+        })
+    end)
+
+    return true
 end
 
 --===================================================================================--
---                              КНОПКИ: ПРИВЯЗКА                                      --
+--                              КНОПКИ                                                 --
 --===================================================================================--
 
 ToggleButton.MouseButton1Click:Connect(function()
@@ -595,56 +503,41 @@ end)
 
 ClaimButton.MouseButton1Click:Connect(function()
     if currentFruit then
-        local ok = claimFruit(currentFruit)
-        if ok then
-            ClaimButton.Text = "ЗАБРАНО!"
-            ClaimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            task.delay(2, function()
-                ClaimButton.Text = "ЗАБРАТЬ В ИНВЕНТАРЬ"
-                ClaimButton.BackgroundColor3 = Color3.fromRGB(30, 150, 50)
-            end)
-        end
+        claimFruit(currentFruit)
+        ClaimButton.Text = "ЗАБРАНО!"
+        ClaimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        task.delay(2, function()
+            ClaimButton.Text = "ЗАБРАТЬ В ИНВЕНТАРЬ"
+            ClaimButton.BackgroundColor3 = Color3.fromRGB(30, 150, 50)
+        end)
     end
 end)
 
 BuyButton.MouseButton1Click:Connect(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "GACHA",
-        Text = "Ищем Бели (Blox Fruit Gacha NPC)...",
-        Duration = 3
-    })
-
-    local success, err = pcall(function()
+    pcall(function()
         CommF:InvokeServer("BuyUnverifiedCompassItem")
     end)
-
-    if success then
+    pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "GACHA",
-            Text = "Фрукт куплен у Бели!",
+            Text = "Покупка у Бели...",
             Duration = 3
         })
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "GACHA",
-            Text = "Используй GACHA кнопку для визуальной прокрутки!",
-            Duration = 3
-        })
-    end
+    end)
 end)
 
 --===================================================================================--
---                              ИНИЦИАЛИЗАЦИЯ                                         --
+--                              СТАРТ                                                 --
 --===================================================================================--
 
 populateCards()
 
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Fruit Gacha",
-    Text = "Gacha загружена! Нажми GACHA чтобы открыть!",
-    Duration = 3
-})
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Fruit Gacha",
+        Text = "Нажми GACHA чтобы открыть!",
+        Duration = 3
+    })
+end)
 
-print("[GACHA] Скрипт загружен успешно!")
-print("[GACHA] x8 шанс на Legendary/Mythical фрукты!")
-print("[GACHA] Нажми кнопку GACHA чтобы открыть окно.")
+print("[GACHA] Загружен! x8 шанс на Legendary/Mythical.")
