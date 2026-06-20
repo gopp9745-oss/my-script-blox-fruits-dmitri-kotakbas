@@ -310,6 +310,10 @@ local function getArea()
     for _, a in pairs(lvlMap) do
         if lvl >= a[1] and lvl <= a[2] then return a end
     end
+    local hrp = getHRP()
+    if hrp then
+        return {"max", 9999, "Max Level", CFrame.new(hrp.Position)}
+    end
     return lvlMap[#lvlMap]
 end
 
@@ -1077,7 +1081,7 @@ local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
             else
                 Config._Target = nil
                 noEnemyWait = noEnemyWait + 1
-                if noEnemyWait > 15 then
+                if noEnemyWait > 20 and area[1] ~= "max" then
                     flyTo(area[4].Position + Vector3.new(0, 15, 0))
                     noEnemyWait = 0
                     task.wait(2)
