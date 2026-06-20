@@ -482,15 +482,51 @@ end
 --                              MOVEMENT                                              --
 --===================================================================================--
 
+local FLY_SPEED = 200
+local flyBusy = false
+
 local function flyTo(pos)
+    if flyBusy then return end
+    flyBusy = true
+
     local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then
+        flyBusy = false
+        return
+    end
+
     local hrp = char.HumanoidRootPart
-    local d = (pos - hrp.Position).Magnitude
-    if d < 1 then return end
-    local tw = TweenService:Create(hrp, TweenInfo.new(math.clamp(d / 300, 0.2, 2.5), Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
-    tw:Play()
-    tw.Completed:Wait()
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local target = Vector3.new(pos.X, pos.Y, pos.Z)
+    local dist = (target - hrp.Position).Magnitude
+
+    if dist < 3 then
+        flyBusy = false
+        return
+    end
+
+    local duration = math.clamp(dist / FLY_SPEED, 0.5, 30)
+    local startTime = tick()
+
+    while tick() - startTime < duration do
+        if not char or not hrp or not hrp.Parent then flyBusy = false return end
+        if not alive() then flyBusy = false return end
+
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+
+        local startPos = hrp.Position
+        local newPos = startPos:Lerp(target, math.min(alpha * 1.05, 1))
+
+        hrp.CFrame = CFrame.new(newPos, Vector3.new(target.X, newPos.Y, target.Z))
+
+        local remaining = (target - newPos).Magnitude
+        if remaining < 3 then break end
+
+        task.wait(0.03)
+    end
+
+    flyBusy = false
 end
 
 local function lookAt(targetPos)
@@ -1171,7 +1207,8 @@ addSection(farmTab, "Auto Farm")
 local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
     Config.AutoFarm = state
     Config.AutoLevel = state
-    while Config.AutoFarm and task.wait(0.1) do
+    local noEnemyWait = 0
+    while Config.AutoFarm and task.wait(0.15) do
         pcall(function()
             if not alive() then return end
             local hrp = getHRP()
@@ -1185,12 +1222,19 @@ local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
             local target, dist = findNearestEnemy()
             if target and dist < 400 then
                 Config._Target = target
-                if dist > 8 then flyTo(target.HumanoidRootPart.Position + Vector3.new(0, Config.FarmDistance, 0)) end
+                noEnemyWait = 0
+                if dist > 15 then
+                    flyTo(target.HumanoidRootPart.Position + Vector3.new(0, Config.FarmDistance, 0))
+                end
                 lookAt(target.HumanoidRootPart.Position)
                 attack()
             else
                 Config._Target = nil
-                flyTo(area[4].Position)
+                noEnemyWait = noEnemyWait + 1
+                if noEnemyWait > 20 then
+                    flyTo(area[4].Position + Vector3.new(0, 15, 0))
+                    noEnemyWait = 0
+                end
             end
         end)
     end
@@ -1638,12 +1682,27 @@ end)
 --                              WALK SPEED LOOP                                       --
 --===================================================================================--
 
-RunService.Heartbeat:Connect(function()
-    local char = plr.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = Config.WalkSpeed
-        char.Humanoid.JumpPower = Config.JumpPower
-    end
+local function applySpeed()
+    pcall(function()
+        local char = plr.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = Config.WalkSpeed
+            char.Humanoid.JumpPower = Config.JumpPower
+        end
+    end)
+end
+
+RunService.Heartbeat:Connect(applySpeed)
+
+plr.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    applySpeed()
+    char:WaitForChild("Humanoid").Changed:Connect(function(prop)
+        if prop == "WalkSpeed" or prop == "JumpPower" then
+            task.wait(0.1)
+            applySpeed()
+        end
+    end)
 end)
 
 --===================================================================================--
