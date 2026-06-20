@@ -44,28 +44,10 @@ local Protection = {
     AntiCrash = true,
     AntiTeleportBack = true,
     AntiDetection = true,
-    RemoteRateLimit = 15,
     MaxRemotesPerSecond = 50,
 }
 
--- Remote call rate limiter — prevents kick for spamming remotes
-local remoteLog = {}
-local remoteCount = 0
-local function rateLimitedRemote(func, ...)
-    if not Protection.AntiKick then return func(...) end
-    local now = tick()
-    if now - (remoteLog.window or 0) > 1 then
-        remoteLog.window = now
-        remoteLog.count = 0
-    end
-    remoteLog.count = (remoteLog.count or 0) + 1
-    if remoteLog.count > Protection.MaxRemotesPerSecond then
-        task.wait(0.1)
-        remoteLog.count = 0
-        remoteLog.window = tick()
-    end
-    return func(...)
-end
+local remoteLog = {count = 0, window = 0}
 
 -- Anti-AFK: prevents idle kick
 pcall(function()
@@ -76,37 +58,6 @@ pcall(function()
                 VirtualUser:ClickButton2(Vector2.new())
             end)
         end
-    end)
-end)
-
--- Hook namecall to silently catch suspicious remote blocks
-pcall(function()
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if Protection.AntiDetection then
-            if method == "FireServer" or method == "InvokeServer" then
-                local args = {...}
-                -- Rate limit all remote calls
-                if remoteLog.count and remoteLog.count > Protection.MaxRemotesPerSecond then
-                    task.wait(0.05)
-                end
-            end
-        end
-        return oldNamecall(self, ...)
-    end)
-end)
-
--- Hook __index to prevent kick detection from looking at script parent
-pcall(function()
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if Protection.AntiDetection and checkcaller() then
-            if key == "Parent" and self == mainGui then
-                return game:GetService("CoreGui")
-            end
-        end
-        return oldIndex(self, key)
     end)
 end)
 
@@ -142,150 +93,22 @@ local function detectTeleportBack()
     return false
 end
 
--- Anti-teleport-back: continuously save position during farm
-RunService.Heartbeat:Connect(function()
-    if Config.AutoFarm then
-        local hrp = getHRP()
-        if hrp then
-            savePosition(hrp.Position)
-        end
-    end
-end)
-
--- Anti-teleport-back: restore position if kicked back
-task.spawn(function()
-    while task.wait(0.5) do
-        if Config.AutoFarm and Protection.AntiTeleportBack then
-            pcall(function()
-                if detectTeleportBack() and lastSafePos then
-                    local hrp = getHRP()
-                    if hrp then
-                        hrp.CFrame = CFrame.new(lastSafePos)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 -- Anti-crash: periodic memory cleanup
 local cleanupInstances = {}
-local function trackInstance(inst)
-    if Protection.AntiCrash then
-        table.insert(cleanupInstances, inst)
-    end
-end
 
 task.spawn(function()
     while task.wait(30) do
         if Protection.AntiCrash then
-            -- Clean tracked instances
             for i = #cleanupInstances, 1, -1 do
                 local inst = cleanupInstances[i]
                 if not inst or not inst.Parent then
                     table.remove(cleanupInstances, i)
                 end
             end
-            -- Force garbage collection
             if collectgarbage then
                 collectgarbage("collect")
             end
-            -- Destroy orphaned ESP/billboard
-            pcall(function()
-                local pg = plr:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
-                for _, v in pairs(pg:GetChildren()) do
-                    if v:IsA("ScreenGui") and v.Name == "ChestESP" then
-                        local count = 0
-                        for _, c in pairs(v:GetDescendants()) do
-                            count = count + 1
-                        end
-                        if count > 200 then
-                            for _, c in pairs(v:GetDescendants()) do
-                                c:Destroy()
-                            end
-                        end
-                    end
-                end
-            end)
-            -- Limit billboard count
-            pcall(function()
-                local pg = plr:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
-                for _, sg in pairs(pg:GetChildren()) do
-                    if sg:IsA("ScreenGui") then
-                        local bbCount = 0
-                        for _, d in pairs(sg:GetDescendants()) do
-                            if d:IsA("BillboardGui") then
-                                bbCount = bbCount + 1
-                                if bbCount > 100 then
-                                    d:Destroy()
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
         end
-    end
-end)
-
--- Anti-kick: heartbeat protection — prevents disconnect by keeping connection alive
-task.spawn(function()
-    while task.wait(120) do
-        pcall(function()
-            if Protection.AntiKick then
-                -- Send lightweight heartbeat to keep session alive
-                game:GetService("RunService").Heartbeat:Wait()
-            end
-        end)
-    end
-end)
-
--- Anti-kick: suppress error spam that triggers kick
-pcall(function()
-    local oldNamecall2
-    oldNamecall2 = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if Protection.AntiKick then
-            if method == "FireServer" then
-                local args = {...}
-                if type(args[1]) == "string" then
-                    -- Block known kick-trigger remotes
-                    local blocked = {"Kick", "Ban", "AntiCheat", "AC", "Report"}
-                    for _, b in ipairs(blocked) do
-                        if args[1]:lower():find(b:lower()) then
-                            return nil
-                        end
-                    end
-                end
-            end
-        end
-        return oldNamecall2(self, ...)
-    end)
-end)
-
--- Anti-teleport-back: detect server-initiated teleports
-pcall(function()
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart", 10)
-    if hrp then
-        local lastCFrame = hrp.CFrame
-        local checkCount = 0
-        RunService.Heartbeat:Connect(function()
-            if not Protection.AntiTeleportBack then return end
-            if not Config.AutoFarm then return end
-            checkCount = checkCount + 1
-            if checkCount % 30 == 0 then
-                local newCF = hrp.CFrame
-                local moved = (newCF.Position - lastCFrame.Position).Magnitude
-                if moved > TELEPORT_BACK_THRESHOLD and lastSafePos then
-                    -- Teleport detected, restore position
-                    pcall(function()
-                        hrp.CFrame = CFrame.new(lastSafePos)
-                    end)
-                end
-                lastCFrame = newCF
-            end
-        end)
     end
 end)
 
@@ -312,6 +135,32 @@ local Config = {
     AttackRange = 60,
     FarmDistance = 22,
 }
+
+-- Anti-teleport-back: save position during farm
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if Config.AutoFarm and alive() then
+                local hrp = getHRP()
+                if hrp then savePosition(hrp.Position) end
+            end
+        end)
+    end
+end)
+
+-- Anti-teleport-back: restore if kicked back
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if Config.AutoFarm and Protection.AntiTeleportBack then
+                if detectTeleportBack() and lastSafePos then
+                    local hrp = getHRP()
+                    if hrp then hrp.CFrame = CFrame.new(lastSafePos) end
+                end
+            end
+        end)
+    end
+end)
 
 --===================================================================================--
 --                              LEVEL MAP                                             --
@@ -1569,17 +1418,7 @@ addToggle(protTab, "Anti Crash", true, function(state)
 end)
 
 addLabel(protTab, "Memory cleanup every 30s")
-addLabel(protTab, "Instance limit + GC")
-
-addDivider(protTab)
-addSection(protTab, "Anti Detection")
-
-addToggle(protTab, "Anti Detection", true, function(state)
-    Protection.AntiDetection = state
-end)
-
-addLabel(protTab, "Hook namecall + index spoof")
-addLabel(protTab, "Hides script parent")
+addLabel(protTab, "GC + instance cleanup")
 
 addDivider(protTab)
 addSection(protTab, "Protection Status")
@@ -1594,9 +1433,8 @@ spawn(function()
             if Protection.AntiKick then active = active + 1 end
             if Protection.AntiTeleportBack then active = active + 1 end
             if Protection.AntiCrash then active = active + 1 end
-            if Protection.AntiDetection then active = active + 1 end
-            protStatus.Text = "  Shields: " .. active .. "/4 ACTIVE"
-            protStatus.TextColor3 = active == 4 and GREEN or GOLD
+            protStatus.Text = "  Shields: " .. active .. "/3 ACTIVE"
+            protStatus.TextColor3 = active == 3 and GREEN or GOLD
             protRemote.Text = "  Remote calls: " .. (remoteLog.count or 0) .. "/s"
         end)
     end
@@ -1611,7 +1449,6 @@ addButton(protTab, "Emergency Stop All", function()
     Protection.AntiKick = false
     Protection.AntiTeleportBack = false
     Protection.AntiCrash = false
-    Protection.AntiDetection = false
     pcall(function() togFarm:Set(false) end)
 end)
 
@@ -1619,7 +1456,6 @@ addButton(protTab, "Restore All Shields", function()
     Protection.AntiKick = true
     Protection.AntiTeleportBack = true
     Protection.AntiCrash = true
-    Protection.AntiDetection = true
 end)
 
 --===================================================================================--
