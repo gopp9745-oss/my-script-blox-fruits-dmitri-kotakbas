@@ -318,53 +318,36 @@ local Config = {
 --===================================================================================--
 
 local lvlMap = {
-    {0,11,"Starter Island", CFrame.new(-1242,30,-452)},
-    {11,20,"Starter Island", CFrame.new(-1242,30,-452)},
-    {20,30,"Jungle", CFrame.new(-1242,30,-452)},
-    {30,45,"Pirate Village", CFrame.new(-1120,15,510)},
-    {45,65,"Desert", CFrame.new(840,25,1250)},
-    {65,90,"Frozen Village", CFrame.new(820,70,-1590)},
-    {90,110,"Marine Fortress", CFrame.new(-920,40,3320)},
-    {110,125,"Sky Island 1", CFrame.new(-5100,320,530)},
-    {125,150,"Sky Island 2", CFrame.new(-7900,550,530)},
-    {150,175,"Prison", CFrame.new(4900,8,900)},
-    {175,200,"Colosseum", CFrame.new(-1420,15,-2940)},
-    {200,225,"Magma Village", CFrame.new(-5300,15,1300)},
-    {225,275,"Underwater City", CFrame.new(610,50,1680)},
-    {275,325,"Fountain City", CFrame.new(5160,20,3020)},
-    {325,375,"Shallows", CFrame.new(-1200,15,-3000)},
-    {375,425,"Prison", CFrame.new(4900,8,900)},
-    {425,475,"Magma Village", CFrame.new(-5300,15,1300)},
-    {475,525,"Graveyard", CFrame.new(-2950,50,-3650)},
-    {525,575,"Snow Mountain", CFrame.new(550,90,-2220)},
-    {575,625,"Hot and Cold", CFrame.new(620,30,-7750)},
-    {625,675,"Magma Village 2", CFrame.new(-4300,40,4600)},
-    {675,725,"Prison", CFrame.new(4900,8,900)},
-    {725,775,"Colosseum 2", CFrame.new(-1420,15,-2940)},
-    {775,825,"Green Zone", CFrame.new(-2150,70,2350)},
-    {825,875,"Graveyard 2", CFrame.new(-2950,50,-3650)},
-    {875,925,"Hot and Cold 2", CFrame.new(620,30,-7750)},
-    {925,975,"Magma Village 3", CFrame.new(-4300,40,4600)},
-    {975,1025,"Candy Island", CFrame.new(-1550,25,-32000)},
-    {1025,1075,"Chocolate Island", CFrame.new(230,30,-29500)},
-    {1075,1125,"Prison 2", CFrame.new(4900,8,900)},
-    {1125,1175,"Colosseum 3", CFrame.new(-1420,15,-2940)},
-    {1175,1225,"Tiki Outpost", CFrame.new(-16600,30,4600)},
-    {1225,1275,"Haunted Castle", CFrame.new(-9500,145,6150)},
-    {1275,1325,"Prison 3", CFrame.new(4900,8,900)},
-    {1325,1375,"Prison 4", CFrame.new(4900,8,900)},
-    {1375,1425,"Prison 5", CFrame.new(4900,8,900)},
-    {1425,1475,"Floating Turtle", CFrame.new(-1205,300,-4780)},
-    {1475,1525,"Hydra Island", CFrame.new(5550,25,-520)},
-    {1525,1575,"Great Tree", CFrame.new(8700,130,1750)},
-    {1575,1625,"Castle on Sea", CFrame.new(-5300,20,7000)},
-    {1625,1675,"Turtle Island", CFrame.new(-3065,270,-6519)},
-    {1675,1725,"Port Town", CFrame.new(-6109,30,-1350)},
-    {1725,1775,"Hydra Island 2", CFrame.new(5550,25,-520)},
-    {1775,1825,"Great Tree 2", CFrame.new(8700,130,1750)},
-    {1825,1875,"Prison 6", CFrame.new(4900,8,900)},
-    {1875,1925,"Mansion", CFrame.new(-12700,380,-500)},
-    {1925,2000,"Castle on Sea 2", CFrame.new(-5300,20,7000)},
+    {0,15,"Jungle", CFrame.new(-1242,30,-452)},
+    {15,30,"Pirate Village", CFrame.new(-1120,15,510)},
+    {30,60,"Desert", CFrame.new(840,25,1250)},
+    {60,90,"Frozen Village", CFrame.new(820,70,-1590)},
+    {90,120,"Marine Fortress", CFrame.new(-920,40,3320)},
+    {120,175,"Sky Island", CFrame.new(-5100,320,530)},
+    {175,225,"Prison", CFrame.new(4900,8,900)},
+    {225,300,"Colosseum", CFrame.new(-1420,15,-2940)},
+    {300,375,"Magma Village", CFrame.new(-5300,15,1300)},
+    {375,425,"Underwater City", CFrame.new(610,50,1680)},
+    {425,500,"Fountain City", CFrame.new(5160,20,3020)},
+    {500,575,"Upper Skylands", CFrame.new(-7900,550,530)},
+    {575,650,"Prison 2", CFrame.new(4900,8,900)},
+    {650,725,"Colosseum 2", CFrame.new(-1420,15,-2940)},
+    {725,850,"Green Zone", CFrame.new(-2150,70,2350)},
+    {850,950,"Graveyard", CFrame.new(-2950,50,-3650)},
+    {950,1050,"Hot and Cold", CFrame.new(620,30,-7750)},
+    {1050,1150,"Magma Village 2", CFrame.new(-4300,40,4600)},
+    {1150,1250,"Forgotten Island", CFrame.new(-2300,100,-5800)},
+    {1250,1350,"Cursed Ship", CFrame.new(950,50,-5400)},
+    {1350,1450,"Ice Castle", CFrame.new(5200,100,-3000)},
+    {1450,1550,"Port Town", CFrame.new(-6109,30,-1350)},
+    {1550,1650,"Hydra Island", CFrame.new(5550,25,-520)},
+    {1650,1750,"Great Tree", CFrame.new(8700,130,1750)},
+    {1750,1850,"Floating Turtle", CFrame.new(-1205,300,-4780)},
+    {1850,1950,"Castle on the Sea", CFrame.new(-5300,20,7000)},
+    {1950,2050,"Haunted Castle", CFrame.new(-9500,145,6150)},
+    {2050,2200,"Sea of Treats", CFrame.new(622,25,3970)},
+    {2200,2400,"Tiki Outpost", CFrame.new(-16600,30,4600)},
+    {2400,2700,"Tiki Outpost", CFrame.new(-16600,30,4600)},
 }
 
 --===================================================================================--
@@ -372,32 +355,35 @@ local lvlMap = {
 --===================================================================================--
 
 local questNpcs = {
-    {0, 11, "Quest Giver", CFrame.new(-1242, 30, -452)},
-    {11, 20, "Bandit Quest", CFrame.new(-1242, 30, -452)},
-    {20, 30, "Monkey Quest", CFrame.new(-1242, 30, -452)},
-    {30, 45, "Pirate Quest", CFrame.new(-1120, 15, 510)},
-    {45, 65, "Desert Quest", CFrame.new(840, 25, 1250)},
-    {65, 90, "Frozen Quest", CFrame.new(820, 70, -1590)},
-    {90, 110, "Marine Quest", CFrame.new(-920, 40, 3320)},
-    {110, 125, "Sky Quest 1", CFrame.new(-5100, 320, 530)},
-    {125, 150, "Sky Quest 2", CFrame.new(-7900, 550, 530)},
-    {150, 175, "Prison Quest", CFrame.new(4900, 8, 900)},
-    {175, 200, "Colosseum Quest", CFrame.new(-1420, 15, -2940)},
-    {200, 225, "Magma Quest", CFrame.new(-5300, 15, 1300)},
-    {225, 275, "Underwater Quest", CFrame.new(610, 50, 1680)},
-    {275, 325, "Fountain Quest", CFrame.new(5160, 20, 3020)},
-    {325, 375, "Shallows Quest", CFrame.new(-1200, 15, -3000)},
-    {375, 425, "Prison Quest 2", CFrame.new(4900, 8, 900)},
-    {425, 475, "Magma Quest 2", CFrame.new(-5300, 15, 1300)},
-    {475, 525, "Graveyard Quest", CFrame.new(-2950, 50, -3650)},
-    {525, 575, "Snow Quest", CFrame.new(550, 90, -2220)},
-    {575, 625, "Hot Cold Quest", CFrame.new(620, 30, -7750)},
-    {625, 700, "Magma Quest 3", CFrame.new(-4300, 40, 4600)},
-    {700, 775, "Colosseum Quest 2", CFrame.new(-1420, 15, -2940)},
-    {775, 850, "Green Zone Quest", CFrame.new(-2150, 70, 2350)},
-    {850, 925, "Graveyard Quest 2", CFrame.new(-2950, 50, -3650)},
-    {925, 1000, "Hot Cold Quest 2", CFrame.new(620, 30, -7750)},
-    {1000, 1100, "Forgotten Quest", CFrame.new(-2300, 100, -5800)},
+    {0, 15, "Jungle Quest", CFrame.new(-1242, 30, -452)},
+    {15, 30, "Pirate Quest", CFrame.new(-1120, 15, 510)},
+    {30, 60, "Desert Quest", CFrame.new(840, 25, 1250)},
+    {60, 90, "Frozen Quest", CFrame.new(820, 70, -1590)},
+    {90, 120, "Marine Quest", CFrame.new(-920, 40, 3320)},
+    {120, 175, "Sky Quest", CFrame.new(-5100, 320, 530)},
+    {175, 225, "Prison Quest", CFrame.new(4900, 8, 900)},
+    {225, 300, "Colosseum Quest", CFrame.new(-1420, 15, -2940)},
+    {300, 375, "Magma Quest", CFrame.new(-5300, 15, 1300)},
+    {375, 425, "Underwater Quest", CFrame.new(610, 50, 1680)},
+    {425, 500, "Fountain Quest", CFrame.new(5160, 20, 3020)},
+    {500, 575, "Sky Quest 2", CFrame.new(-7900, 550, 530)},
+    {575, 650, "Prison Quest 2", CFrame.new(4900, 8, 900)},
+    {650, 725, "Colosseum Quest 2", CFrame.new(-1420, 15, -2940)},
+    {725, 850, "Green Zone Quest", CFrame.new(-2150, 70, 2350)},
+    {850, 950, "Graveyard Quest", CFrame.new(-2950, 50, -3650)},
+    {950, 1050, "Hot Cold Quest", CFrame.new(620, 30, -7750)},
+    {1050, 1150, "Magma Quest 2", CFrame.new(-4300, 40, 4600)},
+    {1150, 1250, "Forgotten Quest", CFrame.new(-2300, 100, -5800)},
+    {1250, 1350, "Cursed Ship Quest", CFrame.new(950, 50, -5400)},
+    {1350, 1450, "Ice Castle Quest", CFrame.new(5200, 100, -3000)},
+    {1450, 1550, "Port Town Quest", CFrame.new(-6109, 30, -1350)},
+    {1550, 1650, "Hydra Quest", CFrame.new(5550, 25, -520)},
+    {1650, 1750, "Great Tree Quest", CFrame.new(8700, 130, 1750)},
+    {1750, 1850, "Turtle Quest", CFrame.new(-1205, 300, -4780)},
+    {1850, 1950, "Castle Quest", CFrame.new(-5300, 20, 7000)},
+    {1950, 2050, "Haunted Quest", CFrame.new(-9500, 145, 6150)},
+    {2050, 2200, "Treats Quest", CFrame.new(622, 25, 3970)},
+    {2200, 2700, "Tiki Quest", CFrame.new(-16600, 30, 4600)},
 }
 
 --===================================================================================--
@@ -482,7 +468,7 @@ end
 --                              MOVEMENT                                              --
 --===================================================================================--
 
-local FLY_SPEED = 200
+local FLY_SPEED = 65
 local flyBusy = false
 
 local function flyTo(pos)
@@ -687,16 +673,23 @@ local function acceptQuest()
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    local triedNpcs = {}
+    pcall(function()
+        if plr.PlayerGui:FindFirstChild("QuestClient") then
+            local qgui = plr.PlayerGui.QuestClient
+            if qgui:FindFirstChild("Frame") and qgui.Frame.Visible then
+                return
+            end
+        end
+    end)
 
     for _, q in pairs(workspace:GetDescendants()) do
         if q:IsA("Model") and q.Name:lower():match("quest") and q:FindFirstChild("HumanoidRootPart") then
             local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if d < 25 then
+            if d < 20 then
                 local p = q:FindFirstChildWhichIsA("ProximityPrompt")
                 if p then
                     pcall(function() fireproximityprompt(p) end)
-                    task.wait(0.2)
+                    task.wait(0.3)
                     return true
                 end
             end
@@ -707,19 +700,20 @@ local function acceptQuest()
     if questData then
         local questPos = questData[4]
         local dist = (questPos.Position - hrp.Position).Magnitude
-        if dist > 15 then
+        if dist > 20 then
             flyTo(questPos.Position + Vector3.new(0, 5, 0))
-            task.wait(0.5)
-            for _, q in pairs(workspace:GetDescendants()) do
-                if q:IsA("Model") and q.Name:lower():match("quest") and q:FindFirstChild("HumanoidRootPart") then
-                    local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
-                    if d < 25 then
-                        local p = q:FindFirstChildWhichIsA("ProximityPrompt")
-                        if p then
-                            pcall(function() fireproximityprompt(p) end)
-                            task.wait(0.2)
-                            return true
-                        end
+            task.wait(1)
+        end
+
+        for _, q in pairs(workspace:GetDescendants()) do
+            if q:IsA("Model") and q.Name:lower():match("quest") and q:FindFirstChild("HumanoidRootPart") then
+                local d = (q.HumanoidRootPart.Position - hrp.Position).Magnitude
+                if d < 20 then
+                    local p = q:FindFirstChildWhichIsA("ProximityPrompt")
+                    if p then
+                        pcall(function() fireproximityprompt(p) end)
+                        task.wait(0.3)
+                        return true
                     end
                 end
             end
@@ -1208,7 +1202,8 @@ local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
     Config.AutoFarm = state
     Config.AutoLevel = state
     local noEnemyWait = 0
-    while Config.AutoFarm and task.wait(0.15) do
+    local lastQuestTime = 0
+    while Config.AutoFarm and task.wait(0.2) do
         pcall(function()
             if not alive() then return end
             local hrp = getHRP()
@@ -1216,14 +1211,16 @@ local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
             local area = getArea()
 
             equipBestWeapon()
-            if Config.AutoQuest then acceptQuest() end
+            if Config.AutoQuest and (tick() - lastQuestTime > 5) then
+                if acceptQuest() then lastQuestTime = tick() end
+            end
             addStatPoints()
 
             local target, dist = findNearestEnemy()
-            if target and dist < 400 then
+            if target and dist < 350 then
                 Config._Target = target
                 noEnemyWait = 0
-                if dist > 15 then
+                if dist > 20 then
                     flyTo(target.HumanoidRootPart.Position + Vector3.new(0, Config.FarmDistance, 0))
                 end
                 lookAt(target.HumanoidRootPart.Position)
@@ -1231,9 +1228,10 @@ local togFarm = addToggle(farmTab, "Auto Level Farm (P)", false, function(state)
             else
                 Config._Target = nil
                 noEnemyWait = noEnemyWait + 1
-                if noEnemyWait > 20 then
+                if noEnemyWait > 15 then
                     flyTo(area[4].Position + Vector3.new(0, 15, 0))
                     noEnemyWait = 0
+                    task.wait(2)
                 end
             end
         end)
